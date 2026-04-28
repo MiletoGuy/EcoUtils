@@ -121,3 +121,49 @@
 
 #### Build
 - [x] dotnet build: OK
+
+---
+
+### Commit 5 — `services: InstanceRepository`
+
+**Data:** 28/04/2026
+**Hash:** (preencher após git push)
+
+#### O que foi feito
+- `Services/InstanceRepository.cs` criado: implementa `IInstanceRepository` com persistência JSON em `%LOCALAPPDATA%\EcoUtils\instancias.json`.
+- `CarregarAsync`: abre o arquivo com `File.OpenRead` e desserializa via `JsonSerializer.DeserializeAsync`. Retorna lista vazia se o arquivo não existir ou em caso de `IOException`, `JsonException` ou `UnauthorizedAccessException`.
+- `SalvarAsync`: cria o diretório se necessário via `Directory.CreateDirectory`, depois serializa com `File.Create` + `JsonSerializer.SerializeAsync`.
+- `JsonSerializerOptions` configurado com `WriteIndented = true`.
+
+#### Decisões tomadas durante a execução
+- O operador `??` não unifica `List<EcoInstance>` com `EcoInstance[]` — fallback de `CarregarAsync` corrigido para `new List<EcoInstance>()` em vez de `Array.Empty<EcoInstance>()`.
+- `ArquivoPath` exposto como propriedade estática privada para centralizar o cálculo do caminho sem repetição.
+
+#### Pontos de melhoria identificados
+- Nenhum.
+
+#### Build
+- [x] dotnet build: OK
+
+---
+
+### Commit 6 — `services: IniGeneratorService`
+
+**Data:** 28/04/2026
+**Hash:** (preencher após git push)
+
+#### O que foi feito
+- `Services/IniGeneratorService.cs` criado: implementa `IIniGeneratorService`.
+- `GerarIniAsync`: lê todas as linhas de `EcoPathConstants.EcoIniPadrao` com `File.ReadAllLinesAsync`, percorre as linhas rastreando a seção `[windows]` e substitui a linha `dados=` pelo valor `dados=127.0.0.1:{basePath}`. Grava o resultado em `C:\ecosis\windows\{exeNome}.ini` com `File.WriteAllLinesAsync`. Retorna o caminho do `.ini` gerado.
+- `RemoverIni`: valida que o arquivo existe e que o nome segue o padrão `Eco_*.ini` via regex antes de deletar — proteção explícita para nunca remover `eco.ini`.
+
+#### Decisões tomadas durante a execução
+- Lança `InvalidOperationException` se a chave `dados=` não for encontrada na seção `[windows]` — erro de configuração que deve ser visível, não silenciado.
+- A detecção de seção é feita por comparação `OrdinalIgnoreCase` para robustez com variações de casing no `eco.ini`.
+- A substituição opera no array de linhas in-place (por índice) antes de gravar, evitando alocação de lista adicional.
+
+#### Pontos de melhoria identificados
+- Nenhum.
+
+#### Build
+- [x] dotnet build: OK
