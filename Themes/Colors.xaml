@@ -1,0 +1,74 @@
+<ResourceDictionary xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+                    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+
+    <!-- Backgrounds -->
+    <Color x:Key="AppBackgroundColor">#1e1e1e</Color>
+    <Color x:Key="SidebarBackgroundColor">#252526</Color>
+    <Color x:Key="SidebarItemHoverColor">#2a2d2e</Color>
+    <Color x:Key="SidebarItemActiveColor">#37373d</Color>
+    <Color x:Key="SidebarActiveIndicatorColor">#0078d4</Color>
+    <Color x:Key="PanelBackgroundColor">#252526</Color>
+    <Color x:Key="PanelBorderColor">#3c3c3c</Color>
+
+    <!-- Inputs -->
+    <Color x:Key="InputBackgroundColor">#3c3c3c</Color>
+    <Color x:Key="InputBorderColor">#555555</Color>
+    <Color x:Key="InputBorderFocusColor">#0078d4</Color>
+
+    <!-- Buttons -->
+    <Color x:Key="ButtonPrimaryBackgroundColor">#0078d4</Color>
+    <Color x:Key="ButtonPrimaryHoverColor">#1a8fd1</Color>
+    <Color x:Key="ButtonSecondaryBackgroundColor">#3c3c3c</Color>
+    <Color x:Key="ButtonSecondaryHoverColor">#4a4a4a</Color>
+    <Color x:Key="ButtonDangerBackgroundColor">#c72e2e</Color>
+    <Color x:Key="ButtonDangerHoverColor">#d94040</Color>
+
+    <!-- Text -->
+    <Color x:Key="TextPrimaryColor">#d4d4d4</Color>
+    <Color x:Key="TextSecondaryColor">#8a8a8a</Color>
+    <Color x:Key="TextDisabledColor">#555555</Color>
+    <Color x:Key="TextLinkColor">#4ec9b0</Color>
+
+    <!-- Status -->
+    <Color x:Key="StatusSuccessColor">#4ec9b0</Color>
+    <Color x:Key="StatusWarningColor">#ce9178</Color>
+    <Color x:Key="StatusErrorColor">#f44747</Color>
+
+    <!-- Overlay -->
+    <Color x:Key="OverlayBackgroundColor">#99000000</Color>
+
+    <!-- Table -->
+    <Color x:Key="TableHeaderBackgroundColor">#2d2d2d</Color>
+    <Color x:Key="TableRowHoverColor">#2a2d2e</Color>
+    <Color x:Key="TableRowAlternateColor">#222222</Color>
+
+    <!-- SolidColorBrushes -->
+    <SolidColorBrush x:Key="AppBackground"          Color="{StaticResource AppBackgroundColor}"/>
+    <SolidColorBrush x:Key="SidebarBackground"      Color="{StaticResource SidebarBackgroundColor}"/>
+    <SolidColorBrush x:Key="SidebarItemHover"        Color="{StaticResource SidebarItemHoverColor}"/>
+    <SolidColorBrush x:Key="SidebarItemActive"       Color="{StaticResource SidebarItemActiveColor}"/>
+    <SolidColorBrush x:Key="SidebarActiveIndicator"  Color="{StaticResource SidebarActiveIndicatorColor}"/>
+    <SolidColorBrush x:Key="PanelBackground"         Color="{StaticResource PanelBackgroundColor}"/>
+    <SolidColorBrush x:Key="PanelBorder"             Color="{StaticResource PanelBorderColor}"/>
+    <SolidColorBrush x:Key="InputBackground"         Color="{StaticResource InputBackgroundColor}"/>
+    <SolidColorBrush x:Key="InputBorder"             Color="{StaticResource InputBorderColor}"/>
+    <SolidColorBrush x:Key="InputBorderFocus"        Color="{StaticResource InputBorderFocusColor}"/>
+    <SolidColorBrush x:Key="ButtonPrimaryBackground" Color="{StaticResource ButtonPrimaryBackgroundColor}"/>
+    <SolidColorBrush x:Key="ButtonPrimaryHover"      Color="{StaticResource ButtonPrimaryHoverColor}"/>
+    <SolidColorBrush x:Key="ButtonSecondaryBackground" Color="{StaticResource ButtonSecondaryBackgroundColor}"/>
+    <SolidColorBrush x:Key="ButtonSecondaryHover"    Color="{StaticResource ButtonSecondaryHoverColor}"/>
+    <SolidColorBrush x:Key="ButtonDangerBackground"  Color="{StaticResource ButtonDangerBackgroundColor}"/>
+    <SolidColorBrush x:Key="ButtonDangerHover"       Color="{StaticResource ButtonDangerHoverColor}"/>
+    <SolidColorBrush x:Key="TextPrimary"             Color="{StaticResource TextPrimaryColor}"/>
+    <SolidColorBrush x:Key="TextSecondary"           Color="{StaticResource TextSecondaryColor}"/>
+    <SolidColorBrush x:Key="TextDisabled"            Color="{StaticResource TextDisabledColor}"/>
+    <SolidColorBrush x:Key="TextLink"                Color="{StaticResource TextLinkColor}"/>
+    <SolidColorBrush x:Key="StatusSuccess"           Color="{StaticResource StatusSuccessColor}"/>
+    <SolidColorBrush x:Key="StatusWarning"           Color="{StaticResource StatusWarningColor}"/>
+    <SolidColorBrush x:Key="StatusError"             Color="{StaticResource StatusErrorColor}"/>
+    <SolidColorBrush x:Key="OverlayBackground"       Color="{StaticResource OverlayBackgroundColor}"/>
+    <SolidColorBrush x:Key="TableHeaderBackground"   Color="{StaticResource TableHeaderBackgroundColor}"/>
+    <SolidColorBrush x:Key="TableRowHover"           Color="{StaticResource TableRowHoverColor}"/>
+    <SolidColorBrush x:Key="TableRowAlternate"       Color="{StaticResource TableRowAlternateColor}"/>
+
+</ResourceDictionary>
