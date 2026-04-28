@@ -217,3 +217,57 @@
 
 #### Build
 - [x] dotnet build: OK
+
+---
+
+### Commit 9 — `feat: ExecutarEcoView + ExecutarEcoViewModel`
+
+**Data:** 28/04/2026
+**Hash:** (preencher após git push)
+
+#### O que foi feito
+- `Converters/InverseBoolToVisibilityConverter.cs` criado: `IValueConverter` que retorna `Collapsed` para `true` e `Visible` para `false` — necessário para alternar entre estado vazio e tabela.
+- `ViewModels/InstanceFlyoutViewModel.cs` criado como stub: classe vazia derivada de `ViewModelBase`; será expandida no Commit 10.
+- `ViewModels/ExecutarEcoViewModel.cs` reescrito (completo): `ObservableCollection<EcoInstance> Instancias`, `bool ListaVazia` (derivado), `bool FlyoutAberto`, `InstanceFlyoutViewModel? FlyoutVM`, e quatro comandos (`AdicionarCommand`, `EditarCommand`, `ExcluirCommand`, `ExecutarCommand`). Instâncias carregadas no construtor via `CarregarInstanciasAsync` (fire-and-forget). `AdicionarCommand` define `FlyoutAberto = true`.
+- `Views/ExecutarEcoView.xaml` reescrito (completo): cabeçalho com título "Executar ECO" e botão `+` (DockPanel); estado vazio (visível quando `ListaVazia = true`); tabela com cabeçalho fixo e `ListBox` de instâncias com colunas Apelido/Executável/Banco/Ações; botões de ação (▶ Executar, ✎ Editar, ✕ Excluir) com `CommandParameter="{Binding}"`.
+- `Views/ExecutarEcoView.xaml.cs` mantido sem alteração (já estava correto como stub).
+
+#### Decisões tomadas durante a execução
+- `ListaVazia` é calculado via `Instancias.CollectionChanged += (_, _) => OnPropertyChanged(nameof(ListaVazia))` — notificação automática sem expor `Visibility` no ViewModel.
+- `InverseBoolToVisibilityConverter` criado na pasta `Converters/` em vez de inline no XAML para reutilização futura.
+- `InstanceFlyoutViewModel` e sua View são stubs neste commit porque `ExecutarEcoViewModel` já declara a propriedade `FlyoutVM` e o `DataTemplate` no `App.xaml` referencia o tipo. Sem o stub, o build falharia.
+- Os comandos `EditarCommand`, `ExcluirCommand` e `ExecutarCommand` têm o corpo implementado no Commit 11; neste commit existem como `RelayCommand` que chama métodos privados vazios, garantindo que os bindings XAML funcionem sem erros.
+- `CarregarInstanciasAsync` usa padrão fire-and-forget (`_ = Task`) no construtor — o SynchronizationContext do UI thread é capturado, então `Instancias.Add` na continuação é thread-safe.
+
+#### Pontos de melhoria identificados
+- Nenhum.
+
+#### Build
+- [x] dotnet build: OK
+
+---
+
+### Commit 10 — `feat: InstanceFlyoutView + InstanceFlyoutViewModel`
+
+**Data:** 28/04/2026
+**Hash:** (preencher após git push)
+
+#### O que foi feito
+- `ViewModels/InstanceFlyoutViewModel.cs` reescrito (completo): `Titulo` e `TextoBotaoConfirmar` (derivados do modo novo/edição), `Apelido` (bindable), `ObservableCollection<EcoExecutavel> Executaveis`, `EcoExecutavel? ExecutavelSelecionado`, `ObservableCollection<EcoDatabase> Bancos`, `EcoDatabase? BancoSelecionado`, `StatusIni`, `EcoIniValido`, `PodeConfirmar` (propriedade derivada). `ConfirmarCommand` com `CanExecute` ligado a `PodeConfirmar`. `CancelarCommand` invoca `fecharFlyout`. Construtor recebe todas as interfaces de service + callbacks `onConfirmado` e `fecharFlyout` + `instanciaExistente?` para modo edição.
+- `Views/InstanceFlyoutView.xaml` criado: formulário estilizado com `StackPanel`; campos Apelido (TextBox), Executável (ComboBox), status do eco.ini (TextBlock com DataTrigger de cor), Banco (ComboBox); botões Cancelar (`ButtonSecondary`) e Confirmar/Salvar (`ButtonPrimary`).
+- `Views/InstanceFlyoutView.xaml.cs` criado: code-behind mínimo com `InitializeComponent()`.
+- `Views/ExecutarEcoView.xaml` modificado: adicionado `xmlns:views`; overlay `Grid` com `Grid.RowSpan="2"` cobrindo toda a área, `Rectangle` com `OverlayBackground`, `Border` centralizado (Width=480) contendo `<views:InstanceFlyoutView DataContext="{Binding FlyoutVM}"/>`.
+- `ViewModels/ExecutarEcoViewModel.cs` modificado: `AbrirFlyoutNovo()` instancia `InstanceFlyoutViewModel` com todos os serviços, callback `onConfirmado` que chama `Instancias.Add` + `SalvarAsync`, e callback `fecharFlyout` que define `FlyoutAberto = false`.
+
+#### Decisões tomadas durante a execução
+- `PodeConfirmar` é recalculado via `OnPropertyChanged` sempre que `Apelido`, `ExecutavelSelecionado`, `BancoSelecionado` ou `EcoIniValido` mudam — nenhum campo manual necessário.
+- A cor do `StatusIni` é controlada por `DataTrigger` no XAML (sem converter adicional): `TextSecondary` por padrão, `StatusSuccess` quando `EcoIniValido = true`, `StatusError` quando `false`.
+- `CarregarDadosAsync` await após carregar listas — o `await` captura o `SynchronizationContext` da UI, então `Executaveis.Add` e `Bancos.Add` são executados no UI thread, evitando `InvalidOperationException` do `ObservableCollection`.
+- `SalvarAsync` incluído no callback `onConfirmado` em `AbrirFlyoutNovo()` para que a instância criada seja persistida imediatamente ao confirmar, sem aguardar Commit 11.
+- O flyout é posicionado como overlay via `Grid.RowSpan="2"` dentro do mesmo `Grid` da `ExecutarEcoView` — não é uma nova `Window`, mantendo o contexto visual unificado.
+
+#### Pontos de melhoria identificados
+- O `ConfirmarCommand` usa `async void` via `RelayCommand` — exceções não tratadas em `GerarIniAsync` seriam silenciadas. Considerar adicionar `try/catch` com feedback de erro na UI em sprint futura.
+
+#### Build
+- [x] dotnet build: OK
