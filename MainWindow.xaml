@@ -3,14 +3,40 @@
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
-        xmlns:local="clr-namespace:EcoUtils"
         xmlns:vm="clr-namespace:EcoUtils.ViewModels"
         mc:Ignorable="d"
-        Title="{Binding Title}" Height="450" Width="800">
+        Title="EcoUtils"
+        Width="1024" Height="680"
+        MinWidth="800" MinHeight="520">
     <Window.DataContext>
         <vm:MainViewModel />
     </Window.DataContext>
-    <Grid>
 
+    <Grid>
+        <Grid.ColumnDefinitions>
+            <ColumnDefinition Width="220"/>
+            <ColumnDefinition Width="*"/>
+        </Grid.ColumnDefinitions>
+
+        <!-- Sidebar -->
+        <ListBox Grid.Column="0"
+                 Background="{StaticResource SidebarBackground}"
+                 ItemsSource="{Binding Abas}"
+                 SelectedItem="{Binding AbaAtiva}">
+            <ListBox.ItemTemplate>
+                <DataTemplate>
+                    <StackPanel Orientation="Horizontal" Margin="4,0">
+                        <TextBlock Text="{Binding Icone}" Margin="0,0,8,0"
+                                   Foreground="{StaticResource TextSecondary}"/>
+                        <TextBlock Text="{Binding Rotulo}"
+                                   Foreground="{StaticResource TextPrimary}"/>
+                    </StackPanel>
+                </DataTemplate>
+            </ListBox.ItemTemplate>
+        </ListBox>
+
+        <!-- Workspace -->
+        <ContentControl Grid.Column="1"
+                        Content="{Binding AbaAtiva.ViewModel}"/>
     </Grid>
 </Window>

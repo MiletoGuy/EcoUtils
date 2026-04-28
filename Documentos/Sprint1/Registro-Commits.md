@@ -167,3 +167,53 @@
 
 #### Build
 - [x] dotnet build: OK
+
+---
+
+### Commit 7 — `services: LaunchService`
+
+**Data:** 28/04/2026
+**Hash:** (preencher após git push)
+
+#### O que foi feito
+- `Services/LaunchService.cs` criado: implementa `ILaunchService`.
+- `ExecutarAsync`: verifica existência de `ExecutavelPath`, `BasePath` e `IniPath` com `File.Exists` antes de qualquer tentativa de lançar o processo. Retorna `(false, "mensagem descritiva")` para qualquer arquivo ausente.
+- `Process.Start` usado com `ProcessStartInfo` explícito (`UseShellExecute = true`). Não aguarda o processo terminar.
+- Toda a operação é envolvida em `Task.Run` para manter o padrão async do contrato.
+
+#### Decisões tomadas durante a execução
+- `UseShellExecute = true` é necessário para que o Windows aplique corretamente o contexto de elevação ao executável do ECO, que também requer permissão de administrador.
+- O `Task.Run` envolve apenas o `Process.Start`, pois `File.Exists` é síncrono e leve — não justifica overhead de thread para as verificações.
+
+#### Pontos de melhoria identificados
+- Nenhum.
+
+#### Build
+- [x] dotnet build: OK
+
+---
+
+### Commit 8 — `shell: MainWindow + MainViewModel (sidebar + navegação)`
+
+**Data:** 28/04/2026
+**Hash:** (preencher após git push)
+
+#### O que foi feito
+- `ViewModels/NavItem.cs` criado: POCO com `Rotulo`, `Icone` e `ViewModel` (usando `init`).
+- `ViewModels/MainViewModel.cs` reescrito: `ObservableCollection<NavItem> Abas` + `NavItem? AbaAtiva`; instancia serviços concretos e popula a lista com um `NavItem` para `ExecutarEcoViewModel`.
+- `ViewModels/ExecutarEcoViewModel.cs` criado como stub: recebe as cinco interfaces de serviço via construtor (campos privados); será expandido no Commit 9.
+- `Views/ExecutarEcoView.xaml` + `.xaml.cs` criados como stub: `UserControl` vazio (grid vazio), necessário para compilar o `DataTemplate` no `App.xaml`.
+- `MainWindow.xaml` reescrito: layout de duas colunas (220px sidebar + `*` workspace); `ListBox` vinculado a `Abas`/`AbaAtiva` com `DataTemplate` de ícone + rótulo; `ContentControl` vinculado a `AbaAtiva.ViewModel`; `Width="1024"`, `Height="680"`, `MinWidth="800"`, `MinHeight="520"`.
+- `MainWindow.xaml.cs` limpo: removidos todos os usings desnecessários; mantido apenas `using System.Windows` + `InitializeComponent()`.
+- `App.xaml` atualizado: adicionados namespaces `vm` e `views`; `DataTemplate` de `ExecutarEcoViewModel → ExecutarEcoView` registrado na `ResourceDictionary` (fora das `MergedDictionaries`).
+
+#### Decisões tomadas durante a execução
+- `ExecutarEcoViewModel` e `ExecutarEcoView` precisam existir como stubs neste commit porque `MainViewModel` já os referencia e `App.xaml` já declara o `DataTemplate`. Sem as classes, o build falharia.
+- Os serviços são instanciados diretamente no construtor de `MainViewModel` por simplicidade; injeção de dependência formal está registrada no backlog para sprint futura.
+- O `DataTemplate` é colocado após o bloco `MergedDictionaries` dentro do mesmo `ResourceDictionary` para que os estilos dos temas fiquem disponíveis dentro do template.
+
+#### Pontos de melhoria identificados
+- `MainViewModel` instancia dependências diretamente (new). Considerar DI container (ex.: `Microsoft.Extensions.DependencyInjection`) em sprint futura para facilitar testes e extensibilidade.
+
+#### Build
+- [x] dotnet build: OK
