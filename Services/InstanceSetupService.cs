@@ -67,6 +67,36 @@ public class InstanceSetupService : IInstanceSetupService
         TentarDeletar(iniPath);
     }
 
+    public async Task<bool> ValidarEcoIniAsync()
+    {
+        if (!File.Exists(EcoPathConstants.EcoIniPadrao))
+            return false;
+
+        try
+        {
+            var linhas = await File.ReadAllLinesAsync(EcoPathConstants.EcoIniPadrao);
+
+            bool dentroWindowsSection = false;
+
+            foreach (var linha in linhas)
+            {
+                var t = linha.Trim();
+
+                if (t.StartsWith('['))
+                {
+                    dentroWindowsSection = t.Equals("[windows]", StringComparison.OrdinalIgnoreCase);
+                    continue;
+                }
+
+                if (dentroWindowsSection && t.StartsWith("dados=", StringComparison.OrdinalIgnoreCase))
+                    return true;
+            }
+        }
+        catch { /* inacessível ou corrompido — considerado inválido */ }
+
+        return false;
+    }
+
     private static void TentarDeletar(string path)
     {
         if (string.IsNullOrWhiteSpace(path))       return;

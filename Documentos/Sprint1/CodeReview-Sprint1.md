@@ -21,7 +21,7 @@
 
 ---
 
-### CR-01 — `RemoverIni` nunca é chamado ao excluir instância
+### CR-01 — `RemoverIni` nunca é chamado ao excluir instância ✅ Resolvido
 
 **Arquivo:** `Services/LaunchService.cs`, `ViewModels/ExecutarEcoViewModel.cs`
 
@@ -46,6 +46,8 @@ de instâncias que não existem mais.
 **Correção:**
 1. Injetar `IIniGeneratorService` em `ExecutarEcoViewModel` (já está disponível no DI container).
 2. Chamar `_iniGeneratorService.RemoverIni(instancia.IniPath)` **antes** de remover da coleção.
+
+> **✅ Resolvido — commit `f786983`** — `IIniGeneratorService` substituído por `IInstanceSetupService`. `ExcluirInstanciaAsync` agora chama `_instanceSetupService.Remover(instancia.ExecutavelPath, instancia.IniPath)` antes de remover da coleção, eliminando `.exe` e `.ini` implantados.
 
 ---
 
@@ -110,9 +112,9 @@ recompilação. O `EcoServerHost` hardcoded impede uso com servidor remoto.
 
 ---
 
-### CR-04 — `IniGeneratorService.GerarIniAsync` sobrescreve `.ini` sem verificação ao editar
+### CR-04 — `IniGeneratorService.GerarIniAsync` sobrescreve `.ini` sem verificação ao editar ✅ Resolvido
 
-**Arquivo:** `Services/IniGeneratorService.cs`, `ViewModels/InstanceFlyoutViewModel.cs`
+**Arquivo:** ~~`Services/IniGeneratorService.cs`~~ → `Services/InstanceSetupService.cs`, `ViewModels/InstanceFlyoutViewModel.cs`
 
 **Problema:**
 `ConfirmarAsync` em `InstanceFlyoutViewModel` sempre chama `GerarIniAsync`, inclusive ao
@@ -137,11 +139,13 @@ com o mesmo executável.
 - Ao editar, só regenerar o `.ini` se `ExecutavelSelecionado` ou `BancoSelecionado`
   mudar em relação à instância existente.
 
+> **✅ Resolvido — commits `de83602`–`f786983`** — `InstanceSetupService.ImplantarAsync` usa nomenclatura sequencial `eco_{v}_{b}_{seq}.exe/.ini`, garantindo par de arquivos exclusivo por instância. `ConfirmarAsync` compara `ExecutavelFontePath` e `BasePath` para decidir se reimplanta, preservando os arquivos quando não há mudança.
+
 ---
 
-### CR-05 — `AtualizarStatusIni` valida existência do arquivo, não seu conteúdo
+### CR-05 — `AtualizarStatusIni` valida existência do arquivo, não seu conteúdo ⚠️ Parcialmente Resolvido
 
-**Arquivo:** `ViewModels/InstanceFlyoutViewModel.cs`, `Services/IniGeneratorService.cs`
+**Arquivo:** `ViewModels/InstanceFlyoutViewModel.cs`, ~~`Services/IniGeneratorService.cs`~~ → `Services/InstanceSetupService.cs`
 
 **Problema:**
 O feedback "eco.ini padrão encontrado." e a habilitação do botão Confirmar (`EcoIniValido = true`)
@@ -159,12 +163,16 @@ e só descobre o problema ao confirmar.
   presença da chave `dados=` na seção `[windows]`.
 - Chamar em `AtualizarStatusIni` e ajustar `StatusIni` com a mensagem específica do problema.
 
+> **⚠️ Parcialmente resolvido — commit `a34f61c`** — `InstanceSetupService.ImplantarAsync` lança `InvalidOperationException` se `dados=` não for encontrado na seção `[windows]`, com o erro exibido via `ErroConfirmacao`. Contudo, `AtualizarStatusIni` ainda verifica apenas `File.Exists` — a validação do conteúdo só ocorre após o clique em Confirmar, sem aviso antecipado no formulário.
+
 ---
 
-### CR-06 — Duas instâncias com o mesmo executável compartilham o `.ini` (duplicata de CR-04 — detalhe de colisão)
+### CR-06 — Duas instâncias com o mesmo executável compartilham o `.ini` (duplicata de CR-04 — detalhe de colisão) ✅ Resolvido
 
 Ver CR-04. Registrado separadamente por ser um bug funcional independente do comportamento
 de sobrescrita na edição.
+
+> **✅ Resolvido — commits `de83602`–`f786983`** — Resolvido como parte do CR-04. Cada instância recebe um par exclusivo `eco_{v}_{b}_{seq}.exe/.ini` com numeração sequencial, eliminando qualquer colisão entre instâncias que usam o mesmo executável.
 
 ---
 
@@ -270,7 +278,7 @@ header e linhas compartilhem as mesmas definições de coluna automaticamente.
 
 ---
 
-### CR-11 — `VersionCatalogService.IniPadraoPresente` calculado uma única vez e não atualizado
+### CR-11 — `VersionCatalogService.IniPadraoPresente` calculado uma única vez e não atualizado ✅ Resolvido
 
 **Arquivo:** `Services/VersionCatalogService.cs`
 
@@ -285,6 +293,8 @@ após deletá-lo.
 - `IniPadraoPresente` pode ser removido do modelo `EcoExecutavel`, pois a verificação já é
   feita diretamente em `AtualizarStatusIni` com `File.Exists(EcoPathConstants.EcoIniPadrao)`.
 - Adicionar um botão "Recarregar" ou `FileSystemWatcher` para monitorar a pasta.
+
+> **✅ Resolvido — commit `de83602`** — `IniPadraoPresente` removido de `EcoExecutavel` e de `VersionCatalogService` (ver CR-18). `AtualizarStatusIni` já verificava `File.Exists` diretamente no momento da seleção do executável, garantindo status sempre atualizado.
 
 ---
 
@@ -310,6 +320,8 @@ em disco — **dessincronização silenciosa de estado**.
 
 **Correção:** No `ExcluirCommand.onError`, além de logar, chamar
 `_dialogService.Notificar("Erro ao salvar", ...)` para informar o usuário.
+
+> **⚠️ Agravante introduzido pelo fix de CR-01** — Com `Remover` chamado antes de `SalvarAsync`, uma falha de I/O no `SalvarAsync` resulta em inconsistência mais grave: os arquivos `.exe`/`.ini` são deletados com sucesso, mas a instância permanece no JSON e reaparece na lista no próximo carregamento com referências a arquivos inexistentes.
 
 ---
 
@@ -402,7 +414,7 @@ avaliada no momento da validação em tempo real.
 
 ---
 
-### CR-18 — `EcoExecutavel.IniPadraoPresente` é propriedade do modelo mas nunca usada no ViewModel ou na View
+### CR-18 — `EcoExecutavel.IniPadraoPresente` é propriedade do modelo mas nunca usada no ViewModel ou na View ✅ Resolvido
 
 **Arquivo:** `Models/EcoExecutavel.cs`, `ViewModels/InstanceFlyoutViewModel.cs`
 
@@ -414,30 +426,32 @@ no modelo é portanto redundante e pode causar confusão sobre qual fonte de ver
 **Correção:** Remover `IniPadraoPresente` de `EcoExecutavel` e manter apenas a verificação
 em `AtualizarStatusIni`, que é a que efetivamente controla o estado do formulário.
 
+> **✅ Resolvido — commit `de83602`** — Propriedade `IniPadraoPresente` removida de `EcoExecutavel` e da atribuição em `VersionCatalogService.ListarExecutaveisAsync`.
+
 ---
 
 ## Resumo por Prioridade
 
-| ID | Prioridade | Descrição Resumida | Arquivo Principal |
-|----|-----------|-------------------|-------------------|
-| CR-01 | 🔴 P0 | `RemoverIni` nunca chamado ao excluir | `ExecutarEcoViewModel.cs` |
-| CR-02 | 🔴 P0 | Fire-and-forget sem catch para erros inesperados | `ExecutarEcoViewModel.cs` |
-| CR-03 | 🟠 P1 | Caminhos hardcoded — zero portabilidade | `EcoPathConstants.cs` |
-| CR-04 | 🟠 P1 | `.ini` sobrescrito ao editar; colisão por nome de exe | `IniGeneratorService.cs` |
-| CR-05 | 🟠 P1 | Validação do `eco.ini` incompleta (só existência) | `InstanceFlyoutViewModel.cs` |
-| CR-06 | 🟠 P1 | Duas instâncias com mesmo exe compartilham `.ini` | `IniGeneratorService.cs` |
-| CR-07 | 🟡 P2 | Seleção nativa do `ListBox` conflita com dark theme | `ExecutarEcoView.xaml` |
-| CR-08 | 🟡 P2 | Log usa `DateTime.Now` em vez de UTC | `LogService.cs` |
-| CR-09 | 🟡 P2 | ComboBoxes sem loading state no flyout | `InstanceFlyoutViewModel.cs` |
-| CR-10 | 🟡 P2 | Larguras de coluna duplicadas — risco de desalinhamento | `ExecutarEcoView.xaml` |
-| CR-11 | 🟡 P2 | `IniPadraoPresente` calculado uma vez, não atualizado | `VersionCatalogService.cs` |
-| CR-12 | 🟡 P2 | Erro de I/O na exclusão não notifica o usuário | `ExecutarEcoViewModel.cs` |
-| CR-13 | 🟢 P3 | `ListBox` sem virtualização explícita | `ExecutarEcoView.xaml` |
-| CR-14 | 🟢 P3 | Colunas com largura fixa truncam nomes longos | `ExecutarEcoView.xaml` |
-| CR-15 | 🟢 P3 | Flyout abre duplicado em clique duplo rápido | `ExecutarEcoViewModel.cs` |
-| CR-16 | 🟢 P3 | `MainWindow` acessado sem null-check no `DialogService` | `DialogService.cs` |
-| CR-17 | 🟢 P3 | Lista de apelidos capturada como snapshot | `ExecutarEcoViewModel.cs` |
-| CR-18 | 🟢 P3 | `EcoExecutavel.IniPadraoPresente` redundante | `EcoExecutavel.cs` |
+| ID | Prioridade | Status | Descrição Resumida | Arquivo Principal |
+|----|-----------|--------|-------------------|-------------------|
+| CR-01 | 🔴 P0 | ✅ Resolvido | `RemoverIni` nunca chamado ao excluir | `ExecutarEcoViewModel.cs` |
+| CR-02 | 🔴 P0 | 🔓 Aberto | Fire-and-forget sem catch para erros inesperados | `ExecutarEcoViewModel.cs` |
+| CR-03 | 🟠 P1 | 🔓 Aberto | Caminhos hardcoded — zero portabilidade | `EcoPathConstants.cs` |
+| CR-04 | 🟠 P1 | ✅ Resolvido | `.ini` sobrescrito ao editar; colisão por nome de exe | `InstanceSetupService.cs` |
+| CR-05 | 🟠 P1 | ⚠️ Parcial | Validação do `eco.ini` incompleta (só existência) | `InstanceFlyoutViewModel.cs` |
+| CR-06 | 🟠 P1 | ✅ Resolvido | Duas instâncias com mesmo exe compartilham `.ini` | `InstanceSetupService.cs` |
+| CR-07 | 🟡 P2 | 🔓 Aberto | Seleção nativa do `ListBox` conflita com dark theme | `ExecutarEcoView.xaml` |
+| CR-08 | 🟡 P2 | 🔓 Aberto | Log usa `DateTime.Now` em vez de UTC | `LogService.cs` |
+| CR-09 | 🟡 P2 | 🔓 Aberto | ComboBoxes sem loading state no flyout | `InstanceFlyoutViewModel.cs` |
+| CR-10 | 🟡 P2 | 🔓 Aberto | Larguras de coluna duplicadas — risco de desalinhamento | `ExecutarEcoView.xaml` |
+| CR-11 | 🟡 P2 | ✅ Resolvido | `IniPadraoPresente` calculado uma vez, não atualizado | `VersionCatalogService.cs` |
+| CR-12 | 🟡 P2 | 🔓 Aberto | Erro de I/O na exclusão não notifica o usuário | `ExecutarEcoViewModel.cs` |
+| CR-13 | 🟢 P3 | 🔓 Aberto | `ListBox` sem virtualização explícita | `ExecutarEcoView.xaml` |
+| CR-14 | 🟢 P3 | 🔓 Aberto | Colunas com largura fixa truncam nomes longos | `ExecutarEcoView.xaml` |
+| CR-15 | 🟢 P3 | 🔓 Aberto | Flyout abre duplicado em clique duplo rápido | `ExecutarEcoViewModel.cs` |
+| CR-16 | 🟢 P3 | 🔓 Aberto | `MainWindow` acessado sem null-check no `DialogService` | `DialogService.cs` |
+| CR-17 | 🟢 P3 | 🔓 Aberto | Lista de apelidos capturada como snapshot | `ExecutarEcoViewModel.cs` |
+| CR-18 | 🟢 P3 | ✅ Resolvido | `EcoExecutavel.IniPadraoPresente` redundante | `EcoExecutavel.cs` |
 
 ---
 

@@ -16,4 +16,9 @@ public interface IInstanceSetupService
     /// Operação segura: valida o padrão do nome antes de deletar.
     /// </summary>
     void Remover(string exePath, string iniPath);
+
+    /// <summary>
+    /// Verifica se o eco.ini padrão existe e contém a chave 'dados=' na seção [windows].
+    /// </summary>
+    Task<bool> ValidarEcoIniAsync();
 }

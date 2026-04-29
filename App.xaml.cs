@@ -1,4 +1,7 @@
-﻿using System.Windows;
+﻿using System.IO;
+using System.Text.Json;
+using System.Windows;
+using EcoUtils.Infrastructure;
 using EcoUtils.Services;
 using EcoUtils.Services.Interfaces;
 using EcoUtils.ViewModels;
@@ -13,6 +16,8 @@ public partial class App : Application
     protected override void OnStartup(StartupEventArgs e)
     {
         base.OnStartup(e);
+
+        CarregarConfiguracoes();
 
         var sc = new ServiceCollection();
 
@@ -46,6 +51,30 @@ public partial class App : Application
     {
         _services?.Dispose();
         base.OnExit(e);
+    }
+
+    private static void CarregarConfiguracoes()
+    {
+        var path = Path.Combine(AppContext.BaseDirectory, "appsettings.json");
+        if (!File.Exists(path)) return;
+
+        try
+        {
+            var json     = File.ReadAllText(path);
+            var settings = JsonSerializer.Deserialize<EcoSettings>(json,
+                new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
+            if (settings is null) return;
+
+            if (!string.IsNullOrWhiteSpace(settings.WindowsDir))
+                EcoPathConstants.WindowsDir = settings.WindowsDir;
+            if (!string.IsNullOrWhiteSpace(settings.DadosDir))
+                EcoPathConstants.DadosDir = settings.DadosDir;
+            if (!string.IsNullOrWhiteSpace(settings.LogsDir))
+                EcoPathConstants.LogsDir = settings.LogsDir;
+            if (!string.IsNullOrWhiteSpace(settings.EcoServerHost))
+                EcoPathConstants.EcoServerHost = settings.EcoServerHost;
+        }
+        catch { /* Configuração ausente ou inválida — usa defaults hardcoded */ }
     }
 }
 

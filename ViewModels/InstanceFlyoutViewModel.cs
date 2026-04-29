@@ -47,7 +47,7 @@ public class InstanceFlyoutViewModel : ViewModelBase
         set
         {
             SetProperty(ref _executavelSelecionado, value);
-            AtualizarStatusIni();
+            _ = AtualizarStatusIniAsync();
             ConfirmarCommand.RaiseCanExecuteChanged();
         }
     }
@@ -126,20 +126,27 @@ public class InstanceFlyoutViewModel : ViewModelBase
 
     private async System.Threading.Tasks.Task CarregarDadosAsync()
     {
-        var exes   = await _versionCatalogService.ListarExecutaveisAsync();
-        var bancos = await _databaseDiscoveryService.ListarBancosAsync();
-
-        foreach (var exe   in exes)   Executaveis.Add(exe);
-        foreach (var banco in bancos) Bancos.Add(banco);
-
-        if (_instanciaExistente is not null)
+        try
         {
-            ExecutavelSelecionado = Executaveis.FirstOrDefault(e => e.ExePath == _instanciaExistente.ExecutavelFontePath);
-            BancoSelecionado      = Bancos.FirstOrDefault(b => b.EcoPath == _instanciaExistente.BasePath);
+            var exes   = await _versionCatalogService.ListarExecutaveisAsync();
+            var bancos = await _databaseDiscoveryService.ListarBancosAsync();
+
+            foreach (var exe   in exes)   Executaveis.Add(exe);
+            foreach (var banco in bancos) Bancos.Add(banco);
+
+            if (_instanciaExistente is not null)
+            {
+                ExecutavelSelecionado = Executaveis.FirstOrDefault(e => e.ExePath == _instanciaExistente.ExecutavelFontePath);
+                BancoSelecionado      = Bancos.FirstOrDefault(b => b.EcoPath == _instanciaExistente.BasePath);
+            }
+        }
+        catch (Exception ex)
+        {
+            ErroConfirmacao = $"Erro ao carregar dados do formulário: {ex.Message}";
         }
     }
 
-    private void AtualizarStatusIni()
+private async System.Threading.Tasks.Task AtualizarStatusIniAsync()
     {
         if (ExecutavelSelecionado is null)
         {
@@ -148,11 +155,18 @@ public class InstanceFlyoutViewModel : ViewModelBase
             return;
         }
 
-        bool existe  = File.Exists(EcoPathConstants.EcoIniPadrao);
-        EcoIniValido = existe;
-        StatusIni    = existe
-            ? "eco.ini padrão encontrado."
-            : $"eco.ini padrão não encontrado em {EcoPathConstants.WindowsDir}.";
+        if (!File.Exists(EcoPathConstants.EcoIniPadrao))
+        {
+            StatusIni    = $"eco.ini padrão não encontrado em {EcoPathConstants.WindowsDir}.";
+            EcoIniValido = false;
+            return;
+        }
+
+        bool valido  = await _instanceSetupService.ValidarEcoIniAsync();
+        StatusIni    = valido
+            ? "eco.ini padrão encontrado e válido."
+            : "eco.ini padrão inválido: chave 'dados=' não encontrada na seção [windows].";
+        EcoIniValido = valido;
     }
 
     private async System.Threading.Tasks.Task ConfirmarAsync()

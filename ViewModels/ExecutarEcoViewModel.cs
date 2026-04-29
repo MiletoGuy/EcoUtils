@@ -76,9 +76,18 @@ public class ExecutarEcoViewModel : ViewModelBase
 
     private async Task CarregarInstanciasAsync()
     {
-        var lista = await _instanceRepository.CarregarAsync();
-        foreach (var inst in lista)
-            Instancias.Add(inst);
+        try
+        {
+            var lista = await _instanceRepository.CarregarAsync();
+            foreach (var inst in lista)
+                Instancias.Add(inst);
+        }
+        catch (Exception ex)
+        {
+            _log.Error(nameof(CarregarInstanciasAsync), ex);
+            _dialogService.Notificar("Erro ao carregar instâncias",
+                "Não foi possível carregar a lista de instâncias. Verifique os logs.");
+        }
     }
 
     private void AbrirFlyoutNovo()
