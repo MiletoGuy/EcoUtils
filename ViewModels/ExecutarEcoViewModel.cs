@@ -1,6 +1,5 @@
+using System.Collections.Generic;
 using System.Collections.ObjectModel;
-using System.Collections.Specialized;
-using System.Linq;
 using System.Windows.Input;
 using EcoUtils.Commands;
 using EcoUtils.Models;
@@ -15,6 +14,7 @@ public class ExecutarEcoViewModel : ViewModelBase
     private readonly IDatabaseDiscoveryService _databaseDiscoveryService;
     private readonly IIniGeneratorService      _iniGeneratorService;
     private readonly ILaunchService            _launchService;
+    private readonly IDialogService            _dialogService;
 
     public ObservableCollection<EcoInstance> Instancias { get; }
 
@@ -44,13 +44,15 @@ public class ExecutarEcoViewModel : ViewModelBase
         IVersionCatalogService versionCatalogService,
         IDatabaseDiscoveryService databaseDiscoveryService,
         IIniGeneratorService iniGeneratorService,
-        ILaunchService launchService)
+        ILaunchService launchService,
+        IDialogService dialogService)
     {
         _instanceRepository       = instanceRepository;
         _versionCatalogService    = versionCatalogService;
         _databaseDiscoveryService = databaseDiscoveryService;
         _iniGeneratorService      = iniGeneratorService;
         _launchService            = launchService;
+        _dialogService            = dialogService;
 
         Instancias = new ObservableCollection<EcoInstance>();
         Instancias.CollectionChanged += (_, _) => OnPropertyChanged(nameof(ListaVazia));
@@ -87,16 +89,36 @@ public class ExecutarEcoViewModel : ViewModelBase
 
     private void AbrirFlyoutEditar(EcoInstance instancia)
     {
-        // Implementado no Commit 11
+        FlyoutVM = new InstanceFlyoutViewModel(
+            _versionCatalogService,
+            _databaseDiscoveryService,
+            _iniGeneratorService,
+            instanciaEditada =>
+            {
+                var idx = Instancias.IndexOf(instancia);
+                if (idx >= 0) Instancias[idx] = instanciaEditada;
+                _ = _instanceRepository.SalvarAsync(new List<EcoInstance>(Instancias));
+            },
+            () => FlyoutAberto = false,
+            instancia);
+        FlyoutAberto = true;
     }
 
     private void ExcluirInstancia(EcoInstance instancia)
     {
-        // Implementado no Commit 11
+        if (!_dialogService.Confirmar("Excluir instância", $"Excluir \"{instancia.Apelido}\"?", "Excluir"))
+            return;
+
+        Instancias.Remove(instancia);
+        _ = _instanceRepository.SalvarAsync(new List<EcoInstance>(Instancias));
     }
 
-    private void IniciarEco(EcoInstance instancia)
+    private void IniciarEco(EcoInstance instancia) => _ = IniciarEcoAsync(instancia);
+
+    private async System.Threading.Tasks.Task IniciarEcoAsync(EcoInstance instancia)
     {
-        // Implementado no Commit 11
+        var (sucesso, erro) = await _launchService.ExecutarAsync(instancia);
+        if (!sucesso)
+            _dialogService.Notificar("Erro ao executar", erro ?? "Erro desconhecido.");
     }
 }

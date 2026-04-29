@@ -17,11 +17,12 @@ public class MainViewModel : ViewModelBase
 
     public MainViewModel()
     {
-        IInstanceRepository       instanceRepo       = new InstanceRepository();
-        IVersionCatalogService    versionService     = new VersionCatalogService();
-        IDatabaseDiscoveryService databaseService    = new DatabaseDiscoveryService();
-        IIniGeneratorService      iniService         = new IniGeneratorService();
-        ILaunchService            launchService      = new LaunchService();
+        IInstanceRepository       instanceRepo    = new InstanceRepository();
+        IVersionCatalogService    versionService  = new VersionCatalogService();
+        IDatabaseDiscoveryService databaseService = new DatabaseDiscoveryService();
+        IIniGeneratorService      iniService      = new IniGeneratorService();
+        ILaunchService            launchService   = new LaunchService();
+        IDialogService            dialogService   = new DialogService();
 
         Abas = new ObservableCollection<NavItem>
         {
@@ -34,7 +35,8 @@ public class MainViewModel : ViewModelBase
                     versionService,
                     databaseService,
                     iniService,
-                    launchService)
+                    launchService,
+                    dialogService)
             }
         };
 
