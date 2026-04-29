@@ -21,19 +21,16 @@ public class VersionCatalogService : IVersionCatalogService
         {
             try
             {
-                if (!Directory.Exists(EcoPathConstants.WindowsDir))
+                if (!Directory.Exists(EcoPathConstants.UtilsDir))
                     return Array.Empty<EcoExecutavel>();
 
-                var iniPadraoPresente = File.Exists(EcoPathConstants.EcoIniPadrao);
-
                 var resultado = Directory
-                    .EnumerateFiles(EcoPathConstants.WindowsDir, "*.exe")
+                    .EnumerateFiles(EcoPathConstants.UtilsDir, "*.exe")
                     .Where(path => _exeRegex.IsMatch(Path.GetFileName(path)))
                     .Select(path => new EcoExecutavel
                     {
-                        NomeCompleto      = Path.GetFileNameWithoutExtension(path),
-                        ExePath           = path,
-                        IniPadraoPresente = iniPadraoPresente
+                        NomeCompleto = Path.GetFileNameWithoutExtension(path),
+                        ExePath      = path
                     })
                     .ToList();
 
