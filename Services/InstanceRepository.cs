@@ -43,9 +43,12 @@ public class InstanceRepository : IInstanceRepository
     public async Task SalvarAsync(IReadOnlyList<EcoInstance> instancias)
     {
         var arquivo = ArquivoPath;
+        var tmp     = arquivo + ".tmp";
         Directory.CreateDirectory(Path.GetDirectoryName(arquivo)!);
 
-        await using var stream = File.Create(arquivo);
-        await JsonSerializer.SerializeAsync(stream, instancias, _jsonOptions);
+        await using (var stream = File.Create(tmp))
+            await JsonSerializer.SerializeAsync(stream, instancias, _jsonOptions);
+
+        File.Move(tmp, arquivo, overwrite: true);
     }
 }

@@ -1,5 +1,7 @@
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
+using System.Linq;
+using System.Threading.Tasks;
 using System.Windows.Input;
 using EcoUtils.Commands;
 using EcoUtils.Models;
@@ -15,6 +17,7 @@ public class ExecutarEcoViewModel : ViewModelBase
     private readonly IIniGeneratorService      _iniGeneratorService;
     private readonly ILaunchService            _launchService;
     private readonly IDialogService            _dialogService;
+    private readonly ILogService               _log;
 
     public ObservableCollection<EcoInstance> Instancias { get; }
 
@@ -45,7 +48,8 @@ public class ExecutarEcoViewModel : ViewModelBase
         IDatabaseDiscoveryService databaseDiscoveryService,
         IIniGeneratorService iniGeneratorService,
         ILaunchService launchService,
-        IDialogService dialogService)
+        IDialogService dialogService,
+        ILogService log)
     {
         _instanceRepository       = instanceRepository;
         _versionCatalogService    = versionCatalogService;
@@ -53,19 +57,24 @@ public class ExecutarEcoViewModel : ViewModelBase
         _iniGeneratorService      = iniGeneratorService;
         _launchService            = launchService;
         _dialogService            = dialogService;
+        _log                      = log;
 
         Instancias = new ObservableCollection<EcoInstance>();
         Instancias.CollectionChanged += (_, _) => OnPropertyChanged(nameof(ListaVazia));
 
         AdicionarCommand = new RelayCommand(_ => AbrirFlyoutNovo());
         EditarCommand    = new RelayCommand(inst => AbrirFlyoutEditar((EcoInstance)inst!));
-        ExcluirCommand   = new RelayCommand(inst => ExcluirInstancia((EcoInstance)inst!));
-        ExecutarCommand  = new RelayCommand(inst => IniciarEco((EcoInstance)inst!));
+        ExcluirCommand   = new AsyncRelayCommand(
+            async inst => await ExcluirInstanciaAsync((EcoInstance)inst!),
+            onError: ex => _log.Error(nameof(ExcluirInstanciaAsync), ex));
+        ExecutarCommand  = new AsyncRelayCommand(
+            async inst => await IniciarEcoAsync((EcoInstance)inst!),
+            onError: ex => _log.Error(nameof(IniciarEcoAsync), ex));
 
         _ = CarregarInstanciasAsync();
     }
 
-    private async System.Threading.Tasks.Task CarregarInstanciasAsync()
+    private async Task CarregarInstanciasAsync()
     {
         var lista = await _instanceRepository.CarregarAsync();
         foreach (var inst in lista)
@@ -74,51 +83,57 @@ public class ExecutarEcoViewModel : ViewModelBase
 
     private void AbrirFlyoutNovo()
     {
+        var apelidosExistentes = Instancias.Select(i => i.Apelido).ToList();
         FlyoutVM = new InstanceFlyoutViewModel(
             _versionCatalogService,
             _databaseDiscoveryService,
             _iniGeneratorService,
-            instancia =>
+            async instancia =>
             {
                 Instancias.Add(instancia);
-                _ = _instanceRepository.SalvarAsync(new System.Collections.Generic.List<EcoInstance>(Instancias));
+                await _instanceRepository.SalvarAsync(new List<EcoInstance>(Instancias));
             },
-            () => FlyoutAberto = false);
+            () => FlyoutAberto = false,
+            apelidosExistentes);
         FlyoutAberto = true;
     }
 
     private void AbrirFlyoutEditar(EcoInstance instancia)
     {
+        var apelidosExistentes = Instancias
+            .Where(i => i.Id != instancia.Id)
+            .Select(i => i.Apelido)
+            .ToList();
         FlyoutVM = new InstanceFlyoutViewModel(
             _versionCatalogService,
             _databaseDiscoveryService,
             _iniGeneratorService,
-            instanciaEditada =>
+            async instanciaEditada =>
             {
                 var idx = Instancias.IndexOf(instancia);
                 if (idx >= 0) Instancias[idx] = instanciaEditada;
-                _ = _instanceRepository.SalvarAsync(new List<EcoInstance>(Instancias));
+                await _instanceRepository.SalvarAsync(new List<EcoInstance>(Instancias));
             },
             () => FlyoutAberto = false,
+            apelidosExistentes,
             instancia);
         FlyoutAberto = true;
     }
 
-    private void ExcluirInstancia(EcoInstance instancia)
+    private async Task ExcluirInstanciaAsync(EcoInstance instancia)
     {
         if (!_dialogService.Confirmar("Excluir instância", $"Excluir \"{instancia.Apelido}\"?", "Excluir"))
             return;
 
         Instancias.Remove(instancia);
-        _ = _instanceRepository.SalvarAsync(new List<EcoInstance>(Instancias));
+        await _instanceRepository.SalvarAsync(new List<EcoInstance>(Instancias));
     }
 
-    private void IniciarEco(EcoInstance instancia) => _ = IniciarEcoAsync(instancia);
-
-    private async System.Threading.Tasks.Task IniciarEcoAsync(EcoInstance instancia)
+    private async Task IniciarEcoAsync(EcoInstance instancia)
     {
         var (sucesso, erro) = await _launchService.ExecutarAsync(instancia);
         if (!sucesso)
             _dialogService.Notificar("Erro ao executar", erro ?? "Erro desconhecido.");
     }
 }
+

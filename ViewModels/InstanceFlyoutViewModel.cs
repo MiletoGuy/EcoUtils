@@ -11,12 +11,13 @@ namespace EcoUtils.ViewModels;
 
 public class InstanceFlyoutViewModel : ViewModelBase
 {
-    private readonly IVersionCatalogService    _versionCatalogService;
-    private readonly IDatabaseDiscoveryService _databaseDiscoveryService;
-    private readonly IIniGeneratorService      _iniGeneratorService;
-    private readonly Action<EcoInstance>       _onConfirmado;
-    private readonly Action                    _fecharFlyout;
-    private readonly EcoInstance?              _instanciaExistente;
+    private readonly IVersionCatalogService       _versionCatalogService;
+    private readonly IDatabaseDiscoveryService    _databaseDiscoveryService;
+    private readonly IIniGeneratorService         _iniGeneratorService;
+    private readonly Func<EcoInstance, Task>      _onConfirmado;
+    private readonly Action                       _fecharFlyout;
+    private readonly EcoInstance?                 _instanciaExistente;
+    private readonly IReadOnlyCollection<string>  _apelidosExistentes;
 
     public string Titulo              => _instanciaExistente is null ? "Nova Instância ECO" : "Editar Instância";
     public string TextoBotaoConfirmar => _instanciaExistente is null ? "Confirmar"          : "Salvar";
@@ -25,8 +26,17 @@ public class InstanceFlyoutViewModel : ViewModelBase
     public string Apelido
     {
         get => _apelido;
-        set { SetProperty(ref _apelido, value); OnPropertyChanged(nameof(PodeConfirmar)); }
+        set
+        {
+            SetProperty(ref _apelido, value);
+            OnPropertyChanged(nameof(ApelidoDuplicado));
+            OnPropertyChanged(nameof(PodeConfirmar));
+        }
     }
+
+    public bool ApelidoDuplicado =>
+        !string.IsNullOrWhiteSpace(Apelido) &&
+        _apelidosExistentes.Contains(Apelido.Trim(), StringComparer.OrdinalIgnoreCase);
 
     public ObservableCollection<EcoExecutavel> Executaveis { get; } = new();
 
@@ -65,8 +75,22 @@ public class InstanceFlyoutViewModel : ViewModelBase
         private set { SetProperty(ref _ecoIniValido, value); OnPropertyChanged(nameof(PodeConfirmar)); }
     }
 
+    private string? _erroConfirmacao;
+    public string? ErroConfirmacao
+    {
+        get => _erroConfirmacao;
+        private set
+        {
+            SetProperty(ref _erroConfirmacao, value);
+            OnPropertyChanged(nameof(TemErro));
+        }
+    }
+
+    public bool TemErro => ErroConfirmacao is not null;
+
     public bool PodeConfirmar =>
         !string.IsNullOrWhiteSpace(Apelido) &&
+        !ApelidoDuplicado                   &&
         ExecutavelSelecionado is not null    &&
         BancoSelecionado is not null         &&
         EcoIniValido;
@@ -78,8 +102,9 @@ public class InstanceFlyoutViewModel : ViewModelBase
         IVersionCatalogService versionCatalogService,
         IDatabaseDiscoveryService databaseDiscoveryService,
         IIniGeneratorService iniGeneratorService,
-        Action<EcoInstance> onConfirmado,
+        Func<EcoInstance, Task> onConfirmado,
         Action fecharFlyout,
+        IReadOnlyCollection<string> apelidosExistentes,
         EcoInstance? instanciaExistente = null)
     {
         _versionCatalogService    = versionCatalogService;
@@ -87,12 +112,13 @@ public class InstanceFlyoutViewModel : ViewModelBase
         _iniGeneratorService      = iniGeneratorService;
         _onConfirmado             = onConfirmado;
         _fecharFlyout             = fecharFlyout;
+        _apelidosExistentes       = apelidosExistentes;
         _instanciaExistente       = instanciaExistente;
 
         if (instanciaExistente is not null)
             _apelido = instanciaExistente.Apelido;
 
-        ConfirmarCommand = new RelayCommand(async _ => await ConfirmarAsync(), _ => PodeConfirmar);
+        ConfirmarCommand = new AsyncRelayCommand(async _ => await ConfirmarAsync(), _ => PodeConfirmar);
         CancelarCommand  = new RelayCommand(_ => _fecharFlyout());
 
         _ = CarregarDadosAsync();
@@ -133,22 +159,31 @@ public class InstanceFlyoutViewModel : ViewModelBase
     {
         if (!PodeConfirmar) return;
 
-        string iniPath = await _iniGeneratorService.GerarIniAsync(
-            ExecutavelSelecionado!.NomeCompleto,
-            BancoSelecionado!.EcoPath);
+        ErroConfirmacao = null;
 
-        var instancia = new EcoInstance
+        try
         {
-            Id             = _instanciaExistente?.Id ?? Guid.NewGuid(),
-            Apelido        = Apelido.Trim(),
-            ExecutavelPath = ExecutavelSelecionado.ExePath,
-            ExecutavelNome = ExecutavelSelecionado.NomeCompleto,
-            BasePath       = BancoSelecionado.EcoPath,
-            BaseNome       = BancoSelecionado.NomeCompleto,
-            IniPath        = iniPath
-        };
+            string iniPath = await _iniGeneratorService.GerarIniAsync(
+                ExecutavelSelecionado!.NomeCompleto,
+                BancoSelecionado!.EcoPath);
 
-        _onConfirmado(instancia);
-        _fecharFlyout();
+            var instancia = new EcoInstance
+            {
+                Id             = _instanciaExistente?.Id ?? Guid.NewGuid(),
+                Apelido        = Apelido.Trim(),
+                ExecutavelPath = ExecutavelSelecionado.ExePath,
+                ExecutavelNome = ExecutavelSelecionado.NomeCompleto,
+                BasePath       = BancoSelecionado.EcoPath,
+                BaseNome       = BancoSelecionado.NomeCompleto,
+                IniPath        = iniPath
+            };
+
+            await _onConfirmado(instancia);
+            _fecharFlyout();
+        }
+        catch (Exception ex)
+        {
+            ErroConfirmacao = ex.Message;
+        }
     }
 }

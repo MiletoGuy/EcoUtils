@@ -2,6 +2,9 @@
              xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              Padding="24">
+    <UserControl.Resources>
+        <BooleanToVisibilityConverter x:Key="BoolToVisibility"/>
+    </UserControl.Resources>
     <StackPanel>
         <!-- Título -->
         <TextBlock Text="{Binding Titulo}"
@@ -14,7 +17,12 @@
                    Foreground="{StaticResource TextSecondary}"
                    Margin="0,0,0,4"/>
         <TextBox Text="{Binding Apelido, UpdateSourceTrigger=PropertyChanged}"
-                 Margin="0,0,0,16"/>
+                 Margin="0,0,0,4"/>
+        <TextBlock Text="Apelido já está em uso."
+                   Foreground="{StaticResource StatusError}"
+                   FontSize="11"
+                   Margin="0,0,0,12"
+                   Visibility="{Binding ApelidoDuplicado, Converter={StaticResource BoolToVisibility}}"/>
 
         <!-- Executável -->
         <TextBlock Text="Executável ECO"
@@ -52,6 +60,14 @@
                   SelectedItem="{Binding BancoSelecionado}"
                   DisplayMemberPath="NomeCompleto"
                   Margin="0,0,0,24"/>
+
+        <!-- Erro de confirmação -->
+        <TextBlock Text="{Binding ErroConfirmacao}"
+                   Foreground="{StaticResource StatusError}"
+                   FontSize="11"
+                   TextWrapping="Wrap"
+                   Margin="0,0,0,12"
+                   Visibility="{Binding TemErro, Converter={StaticResource BoolToVisibility}}"/>
 
         <!-- Botões -->
         <StackPanel Orientation="Horizontal"
