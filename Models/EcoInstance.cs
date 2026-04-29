@@ -10,4 +10,5 @@ public class EcoInstance
     public string BasePath        { get; set; } = string.Empty;
     public string BaseNome        { get; set; } = string.Empty;
     public string IniPath         { get; set; } = string.Empty;
+    public string VersaoBanco     { get; set; } = string.Empty;
 }

@@ -89,6 +89,8 @@ public class InstanceFlyoutViewModel : ViewModelBase
         private set => SetProperty(ref _statusVersao, value);
     }
 
+    private string? _versaoBancoRaw;
+
     // null = indeterminado (ainda consultando ou campos vazios); true = compatível; false = incompatível
     private bool? _versaoCompativel;
     public bool? VersaoCompativel
@@ -176,6 +178,7 @@ private async System.Threading.Tasks.Task AtualizarStatusVersaoAsync()
         {
             StatusVersao     = string.Empty;
             VersaoCompativel = null;
+            _versaoBancoRaw  = null;
             return;
         }
 
@@ -183,6 +186,7 @@ private async System.Threading.Tasks.Task AtualizarStatusVersaoAsync()
         VersaoCompativel = null;
 
         var versaoBancoRaw = await _databaseVersionService.ConsultarVersaoAsync(BancoSelecionado.EcoPath);
+        _versaoBancoRaw = versaoBancoRaw;
         if (versaoBancoRaw is null)
         {
             StatusVersao     = "Não foi possível consultar a versão do banco.";
@@ -287,7 +291,8 @@ private async System.Threading.Tasks.Task AtualizarStatusVersaoAsync()
                 ExecutavelNome      = ExecutavelSelecionado.NomeCompleto,
                 BasePath            = BancoSelecionado!.EcoPath,
                 BaseNome            = BancoSelecionado.NomeCompleto,
-                IniPath             = iniPath
+                IniPath             = iniPath,
+                VersaoBanco         = _versaoBancoRaw ?? string.Empty
             };
 
             await _onConfirmado(instancia);

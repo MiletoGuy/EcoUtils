@@ -2,14 +2,49 @@
              xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:converters="clr-namespace:EcoUtils.Converters"
-             xmlns:views="clr-namespace:EcoUtils.Views">
+             xmlns:views="clr-namespace:EcoUtils.Views"
+             x:Name="Root">
     <UserControl.Resources>
         <BooleanToVisibilityConverter x:Key="BoolToVisibility"/>
         <converters:InverseBoolToVisibilityConverter x:Key="InverseBoolToVisibility"/>
+        <converters:BoolToGridLengthConverter x:Key="BoolToColumnWidth"/>
+
+        <!-- Cabeçalho de coluna clicável -->
+        <Style x:Key="ColHeader" TargetType="Button" BasedOn="{StaticResource ButtonBase}">
+            <Setter Property="Background"                Value="Transparent"/>
+            <Setter Property="Padding"                   Value="0"/>
+            <Setter Property="HorizontalContentAlignment" Value="Center"/>
+            <Setter Property="Foreground"                Value="{StaticResource TextSecondary}"/>
+            <Style.Triggers>
+                <Trigger Property="IsMouseOver" Value="True">
+                    <Setter Property="Background" Value="Transparent"/>
+                    <Setter Property="Foreground" Value="{StaticResource TextPrimary}"/>
+                </Trigger>
+            </Style.Triggers>
+        </Style>
+
+        <!-- CheckBox do popup de configuração -->
+        <Style x:Key="CheckBoxConfig" TargetType="CheckBox">
+            <Setter Property="Foreground" Value="{StaticResource TextPrimary}"/>
+            <Setter Property="FontFamily" Value="{StaticResource FontBase}"/>
+            <Setter Property="FontSize"   Value="{StaticResource FontSizeBase}"/>
+            <Setter Property="Cursor"     Value="Hand"/>
+            <Setter Property="Margin"     Value="0,0,0,6"/>
+        </Style>
+
+        <!-- Indicador de ordenação: ▲/▼ condicionado a coluna e direção -->
+        <Style x:Key="SortIcon" TargetType="TextBlock">
+            <Setter Property="Margin"     Value="4,0,0,0"/>
+            <Setter Property="FontSize"   Value="9"/>
+            <Setter Property="Foreground" Value="{StaticResource TextSecondary}"/>
+            <Setter Property="Text"       Value="&#x25B2;"/>
+            <Setter Property="Visibility" Value="Collapsed"/>
+        </Style>
     </UserControl.Resources>
 
     <Grid Background="{StaticResource AppBackground}">
         <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
             <RowDefinition Height="Auto"/>
             <RowDefinition Height="*"/>
         </Grid.RowDefinitions>
@@ -20,21 +55,76 @@
                 BorderBrush="{StaticResource PanelBorder}"
                 BorderThickness="0,0,0,1"
                 Padding="16,10">
+            <TextBlock Text="Executar ECO"
+                       Foreground="{StaticResource TextPrimary}"
+                       FontSize="15"
+                       VerticalAlignment="Center"/>
+        </Border>
+
+        <!-- Toolbar: pesquisa + adicionar + configuração de colunas — sempre visível -->
+        <Border Grid.Row="1"
+                Background="{StaticResource PanelBackground}"
+                BorderBrush="{StaticResource PanelBorder}"
+                BorderThickness="0,0,0,1"
+                Padding="16,7">
             <DockPanel>
+                <!-- Botão de configuração de colunas + Popup (extrema direita) -->
+                <Grid DockPanel.Dock="Right" Margin="4,0,0,0">
+                    <Button x:Name="BtnConfigColunas"
+                            Content="&#x22EE;"
+                            Style="{StaticResource ButtonIcon}"
+                            Command="{Binding ToggleConfigColunasCommand}"
+                            ToolTip="Configurar colunas"
+                            Width="28" Height="28"/>
+                    <Popup IsOpen="{Binding ConfigColunasAberto, Mode=TwoWay}"
+                           StaysOpen="False"
+                           PlacementTarget="{Binding ElementName=BtnConfigColunas}"
+                           Placement="Bottom"
+                           HorizontalOffset="-80">
+                        <Border Background="{StaticResource PanelBackground}"
+                                BorderBrush="{StaticResource PanelBorder}"
+                                BorderThickness="1"
+                                CornerRadius="3"
+                                Padding="12,10">
+                            <StackPanel>
+                                <TextBlock Text="Colunas visíveis"
+                                           Foreground="{StaticResource TextSecondary}"
+                                           FontSize="11"
+                                           Margin="0,0,0,8"/>
+                                <CheckBox Content="Executável"
+                                          Style="{StaticResource CheckBoxConfig}"
+                                          IsChecked="{Binding DataContext.MostrarExecutavel, ElementName=Root}"/>
+                                <CheckBox Content="Banco"
+                                          Style="{StaticResource CheckBoxConfig}"
+                                          IsChecked="{Binding DataContext.MostrarBanco, ElementName=Root}"/>
+                                <CheckBox Content="Versão"
+                                          Style="{StaticResource CheckBoxConfig}"
+                                          Margin="0"
+                                          IsChecked="{Binding DataContext.MostrarVersao, ElementName=Root}"/>
+                            </StackPanel>
+                        </Border>
+                    </Popup>
+                </Grid>
+
+                <!-- Botão adicionar instância -->
                 <Button DockPanel.Dock="Right"
                         Content="+"
                         Style="{StaticResource ButtonPrimary}"
+                        Padding="0"
                         Command="{Binding AdicionarCommand}"
-                        Width="28" Height="28"/>
-                <TextBlock Text="Executar ECO"
-                           Foreground="{StaticResource TextPrimary}"
-                           FontSize="15"
-                           VerticalAlignment="Center"/>
+                        Width="28" Height="28"
+                        Margin="0,0,4,0"/>
+
+                <!-- Caixa de pesquisa -->
+                <TextBox Text="{Binding FiltroTexto, UpdateSourceTrigger=PropertyChanged}"
+                         Width="210"
+                         HorizontalAlignment="Left"
+                         VerticalAlignment="Center"/>
             </DockPanel>
         </Border>
 
         <!-- Estado vazio -->
-        <StackPanel Grid.Row="1"
+        <StackPanel Grid.Row="2"
                     HorizontalAlignment="Center"
                     VerticalAlignment="Center"
                     Visibility="{Binding ListaVazia, Converter={StaticResource BoolToVisibility}}">
@@ -49,7 +139,7 @@
         </StackPanel>
 
         <!-- Tabela de instâncias -->
-        <Grid Grid.Row="1"
+        <Grid Grid.Row="2"
               Visibility="{Binding ListaVazia, Converter={StaticResource InverseBoolToVisibility}}">
             <Grid.RowDefinitions>
                 <RowDefinition Height="Auto"/>
@@ -62,15 +152,135 @@
                     Padding="16,6">
                 <Grid>
                     <Grid.ColumnDefinitions>
-                        <ColumnDefinition Width="180"/>
-                        <ColumnDefinition Width="160"/>
-                        <ColumnDefinition Width="160"/>
-                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition x:Name="HeaderColApelido"    Width="2*" MinWidth="150"/>
+                        <ColumnDefinition x:Name="HeaderColExecutavel" Width="0"  MinWidth="150"/>
+                        <ColumnDefinition x:Name="HeaderColBanco"      Width="0"  MinWidth="150"/>
+                        <ColumnDefinition Width="{Binding MostrarVersao, Converter={StaticResource BoolToColumnWidth}, ConverterParameter=80}"/>
+                        <ColumnDefinition Width="100"/>
                     </Grid.ColumnDefinitions>
-                    <TextBlock Grid.Column="0" Text="Apelido"    Foreground="{StaticResource TextSecondary}"/>
-                    <TextBlock Grid.Column="1" Text="Executável" Foreground="{StaticResource TextSecondary}"/>
-                    <TextBlock Grid.Column="2" Text="Banco"      Foreground="{StaticResource TextSecondary}"/>
-                    <TextBlock Grid.Column="3" Text="Ações"      Foreground="{StaticResource TextSecondary}"/>
+
+                    <!-- Apelido -->
+                    <Button Grid.Column="0" Style="{StaticResource ColHeader}"
+                            Command="{Binding OrdenarCommand}" CommandParameter="Apelido">
+                        <StackPanel Orientation="Horizontal">
+                            <TextBlock Text="Apelido"/>
+                            <TextBlock>
+                                <TextBlock.Style>
+                                    <Style TargetType="TextBlock" BasedOn="{StaticResource SortIcon}">
+                                        <Style.Triggers>
+                                            <DataTrigger Binding="{Binding OrdenacaoColuna}" Value="Apelido">
+                                                <Setter Property="Visibility" Value="Visible"/>
+                                            </DataTrigger>
+                                            <DataTrigger Binding="{Binding OrdenacaoAscendente}" Value="False">
+                                                <Setter Property="Text" Value="&#x25BC;"/>
+                                            </DataTrigger>
+                                        </Style.Triggers>
+                                    </Style>
+                                </TextBlock.Style>
+                            </TextBlock>
+                        </StackPanel>
+                    </Button>
+
+                    <!-- Executável -->
+                    <Button Grid.Column="1" Style="{StaticResource ColHeader}"
+                            Command="{Binding OrdenarCommand}" CommandParameter="ExecutavelNome">
+                        <StackPanel Orientation="Horizontal">
+                            <TextBlock Text="Executável"/>
+                            <TextBlock>
+                                <TextBlock.Style>
+                                    <Style TargetType="TextBlock" BasedOn="{StaticResource SortIcon}">
+                                        <Style.Triggers>
+                                            <DataTrigger Binding="{Binding OrdenacaoColuna}" Value="ExecutavelNome">
+                                                <Setter Property="Visibility" Value="Visible"/>
+                                            </DataTrigger>
+                                            <DataTrigger Binding="{Binding OrdenacaoAscendente}" Value="False">
+                                                <Setter Property="Text" Value="&#x25BC;"/>
+                                            </DataTrigger>
+                                        </Style.Triggers>
+                                    </Style>
+                                </TextBlock.Style>
+                            </TextBlock>
+                        </StackPanel>
+                    </Button>
+
+                    <!-- Banco -->
+                    <Button Grid.Column="2" Style="{StaticResource ColHeader}"
+                            Command="{Binding OrdenarCommand}" CommandParameter="BaseNome">
+                        <StackPanel Orientation="Horizontal">
+                            <TextBlock Text="Banco"/>
+                            <TextBlock>
+                                <TextBlock.Style>
+                                    <Style TargetType="TextBlock" BasedOn="{StaticResource SortIcon}">
+                                        <Style.Triggers>
+                                            <DataTrigger Binding="{Binding OrdenacaoColuna}" Value="BaseNome">
+                                                <Setter Property="Visibility" Value="Visible"/>
+                                            </DataTrigger>
+                                            <DataTrigger Binding="{Binding OrdenacaoAscendente}" Value="False">
+                                                <Setter Property="Text" Value="&#x25BC;"/>
+                                            </DataTrigger>
+                                        </Style.Triggers>
+                                    </Style>
+                                </TextBlock.Style>
+                            </TextBlock>
+                        </StackPanel>
+                    </Button>
+
+                    <!-- Versão -->
+                    <Button Grid.Column="3" Style="{StaticResource ColHeader}"
+                            Command="{Binding OrdenarCommand}" CommandParameter="VersaoBanco">
+                        <StackPanel Orientation="Horizontal">
+                            <TextBlock Text="Versão"/>
+                            <TextBlock>
+                                <TextBlock.Style>
+                                    <Style TargetType="TextBlock" BasedOn="{StaticResource SortIcon}">
+                                        <Style.Triggers>
+                                            <DataTrigger Binding="{Binding OrdenacaoColuna}" Value="VersaoBanco">
+                                                <Setter Property="Visibility" Value="Visible"/>
+                                            </DataTrigger>
+                                            <DataTrigger Binding="{Binding OrdenacaoAscendente}" Value="False">
+                                                <Setter Property="Text" Value="&#x25BC;"/>
+                                            </DataTrigger>
+                                        </Style.Triggers>
+                                    </Style>
+                                </TextBlock.Style>
+                            </TextBlock>
+                        </StackPanel>
+                    </Button>
+
+                    <!-- Ações -->
+                    <TextBlock Grid.Column="4" Text="Ações"
+                               Foreground="{StaticResource TextSecondary}"
+                               HorizontalAlignment="Center"
+                               VerticalAlignment="Center"/>
+
+                    <!-- Splitter Apelido | Executável: visível quando Executável visível -->
+                    <GridSplitter Grid.Column="0"
+                                  Width="5" HorizontalAlignment="Right" VerticalAlignment="Stretch"
+                                  Background="Transparent" Cursor="SizeWE"
+                                  ResizeDirection="Columns" ResizeBehavior="CurrentAndNext"
+                                  Panel.ZIndex="10"
+                                  Visibility="{Binding MostrarExecutavel, Converter={StaticResource BoolToVisibility}}"/>
+
+                    <!-- Splitter Executável | Banco: visível quando ambos visíveis -->
+                    <GridSplitter Grid.Column="1"
+                                  Width="5" HorizontalAlignment="Right" VerticalAlignment="Stretch"
+                                  Background="Transparent" Cursor="SizeWE"
+                                  ResizeDirection="Columns" ResizeBehavior="CurrentAndNext"
+                                  Panel.ZIndex="10"
+                                  Visibility="{Binding MostrarSplitterExecutavelBanco, Converter={StaticResource BoolToVisibility}}"/>
+
+                    <!-- Separadores visuais de coluna -->
+                    <Rectangle Grid.Column="1" Width="1" HorizontalAlignment="Left" VerticalAlignment="Stretch"
+                               Fill="{StaticResource PanelBorder}" Opacity="0.5"
+                               Visibility="{Binding MostrarExecutavel, Converter={StaticResource BoolToVisibility}}"/>
+                    <Rectangle Grid.Column="2" Width="1" HorizontalAlignment="Left" VerticalAlignment="Stretch"
+                               Fill="{StaticResource PanelBorder}" Opacity="0.5"
+                               Visibility="{Binding MostrarBanco, Converter={StaticResource BoolToVisibility}}"/>
+                    <Rectangle Grid.Column="3" Width="1" HorizontalAlignment="Left" VerticalAlignment="Stretch"
+                               Fill="{StaticResource PanelBorder}" Opacity="0.5"
+                               Visibility="{Binding MostrarVersao, Converter={StaticResource BoolToVisibility}}"/>
+                    <Rectangle Grid.Column="4" Width="1" HorizontalAlignment="Left" VerticalAlignment="Stretch"
+                               Fill="{StaticResource PanelBorder}" Opacity="0.5"/>
                 </Grid>
             </Border>
 
@@ -78,16 +288,19 @@
             <ListBox Grid.Row="1"
                      Background="{StaticResource AppBackground}"
                      BorderThickness="0"
-                     ItemsSource="{Binding Instancias}">
+                     HorizontalContentAlignment="Stretch"
+                     ItemsSource="{Binding InstanciasView}">
                 <ListBox.ItemTemplate>
                     <DataTemplate>
-                        <Grid Margin="0,4">
+                        <Grid Margin="16,4">
                             <Grid.ColumnDefinitions>
-                                <ColumnDefinition Width="180"/>
-                                <ColumnDefinition Width="160"/>
-                                <ColumnDefinition Width="160"/>
-                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="{Binding DataContext.ColWidthApelido,    ElementName=Root}"/>
+                                <ColumnDefinition Width="{Binding DataContext.ColWidthExecutavel, ElementName=Root}"/>
+                                <ColumnDefinition Width="{Binding DataContext.ColWidthBanco,      ElementName=Root}"/>
+                                <ColumnDefinition Width="{Binding DataContext.MostrarVersao, ElementName=Root, Converter={StaticResource BoolToColumnWidth}, ConverterParameter=80}"/>
+                                <ColumnDefinition Width="100"/>
                             </Grid.ColumnDefinitions>
+
                             <TextBlock Grid.Column="0"
                                        Text="{Binding Apelido}"
                                        Foreground="{StaticResource TextPrimary}"
@@ -95,26 +308,35 @@
                             <TextBlock Grid.Column="1"
                                        Text="{Binding ExecutavelNome}"
                                        Foreground="{StaticResource TextSecondary}"
+                                       HorizontalAlignment="Center"
                                        VerticalAlignment="Center"/>
                             <TextBlock Grid.Column="2"
                                        Text="{Binding BaseNome}"
                                        Foreground="{StaticResource TextSecondary}"
+                                       HorizontalAlignment="Center"
                                        VerticalAlignment="Center"/>
-                            <StackPanel Grid.Column="3"
+                            <TextBlock Grid.Column="3"
+                                       Text="{Binding VersaoBanco}"
+                                       Foreground="{StaticResource TextSecondary}"
+                                       HorizontalAlignment="Center"
+                                       VerticalAlignment="Center"/>
+                            <StackPanel Grid.Column="4"
                                         Orientation="Horizontal"
+                                        HorizontalAlignment="Center"
                                         VerticalAlignment="Center">
-                                <Button Content="▶"
+                                <Button Content="&#x25B6;"
                                         Style="{StaticResource ButtonIcon}"
                                         Command="{Binding DataContext.ExecutarCommand, RelativeSource={RelativeSource AncestorType=ListBox}}"
                                         CommandParameter="{Binding}"
                                         Margin="0,0,4,0"/>
-                                <Button Content="✎"
+                                <Button Content="&#x270E;"
                                         Style="{StaticResource ButtonIcon}"
                                         Command="{Binding DataContext.EditarCommand, RelativeSource={RelativeSource AncestorType=ListBox}}"
                                         CommandParameter="{Binding}"
                                         Margin="0,0,4,0"/>
-                                <Button Content="✕"
+                                <Button Content="&#x2715;"
                                         Style="{StaticResource ButtonDanger}"
+                                        Padding="5,4"
                                         Command="{Binding DataContext.ExcluirCommand, RelativeSource={RelativeSource AncestorType=ListBox}}"
                                         CommandParameter="{Binding}"/>
                             </StackPanel>
@@ -125,7 +347,7 @@
         </Grid>
 
         <!-- Flyout overlay (cobre toda a área) -->
-        <Grid Grid.Row="0" Grid.RowSpan="2"
+        <Grid Grid.Row="0" Grid.RowSpan="3"
               Visibility="{Binding FlyoutAberto, Converter={StaticResource BoolToVisibility}}">
             <Rectangle Fill="{StaticResource OverlayBackground}"/>
             <Border HorizontalAlignment="Center"
