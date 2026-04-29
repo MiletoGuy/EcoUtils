@@ -1,10 +1,8 @@
 ﻿<Application x:Class="EcoUtils.App"
              xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-             xmlns:local="clr-namespace:EcoUtils"
              xmlns:vm="clr-namespace:EcoUtils.ViewModels"
-             xmlns:views="clr-namespace:EcoUtils.Views"
-             StartupUri="MainWindow.xaml">
+             xmlns:views="clr-namespace:EcoUtils.Views">
     <Application.Resources>
         <ResourceDictionary>
             <ResourceDictionary.MergedDictionaries>

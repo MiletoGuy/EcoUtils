@@ -1,6 +1,4 @@
 using System.Collections.ObjectModel;
-using EcoUtils.Services;
-using EcoUtils.Services.Interfaces;
 
 namespace EcoUtils.ViewModels;
 
@@ -15,29 +13,15 @@ public class MainViewModel : ViewModelBase
         set => SetProperty(ref _abaAtiva, value);
     }
 
-    public MainViewModel()
+    public MainViewModel(ExecutarEcoViewModel executarEcoVm)
     {
-        ILogService               log             = new LogService();
-        IInstanceRepository       instanceRepo    = new InstanceRepository(log);
-        IVersionCatalogService    versionService  = new VersionCatalogService(log);
-        IDatabaseDiscoveryService databaseService = new DatabaseDiscoveryService(log);
-        IIniGeneratorService      iniService      = new IniGeneratorService();
-        ILaunchService            launchService   = new LaunchService();
-        IDialogService            dialogService   = new DialogService();
-
         Abas = new ObservableCollection<NavItem>
         {
             new NavItem
             {
                 Rotulo    = "Executar ECO",
                 Icone     = "\u25B6",
-                ViewModel = new ExecutarEcoViewModel(
-                    instanceRepo,
-                    versionService,
-                    databaseService,
-                    iniService,
-                    launchService,
-                    dialogService)
+                ViewModel = executarEcoVm
             }
         };
 
