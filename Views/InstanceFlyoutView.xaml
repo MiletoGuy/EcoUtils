@@ -59,7 +59,27 @@
         <ComboBox ItemsSource="{Binding Bancos}"
                   SelectedItem="{Binding BancoSelecionado}"
                   DisplayMemberPath="NomeCompleto"
-                  Margin="0,0,0,24"/>
+                  Margin="0,0,0,6"/>
+
+        <!-- Status de versão banco × executável -->
+        <TextBlock Text="{Binding StatusVersao}"
+                   FontSize="11"
+                   TextWrapping="Wrap"
+                   Margin="0,0,0,24">
+            <TextBlock.Style>
+                <Style TargetType="TextBlock">
+                    <Setter Property="Foreground" Value="{StaticResource TextSecondary}"/>
+                    <Style.Triggers>
+                        <DataTrigger Binding="{Binding VersaoCompativel}" Value="True">
+                            <Setter Property="Foreground" Value="{StaticResource StatusSuccess}"/>
+                        </DataTrigger>
+                        <DataTrigger Binding="{Binding VersaoCompativel}" Value="False">
+                            <Setter Property="Foreground" Value="{StaticResource StatusWarning}"/>
+                        </DataTrigger>
+                    </Style.Triggers>
+                </Style>
+            </TextBlock.Style>
+        </TextBlock>
 
         <!-- Erro de confirmação -->
         <TextBlock Text="{Binding ErroConfirmacao}"

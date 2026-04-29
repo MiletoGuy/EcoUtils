@@ -11,10 +11,11 @@ namespace EcoUtils.ViewModels;
 
 public class ExecutarEcoViewModel : ViewModelBase
 {
-    private readonly IInstanceRepository       _instanceRepository;
-    private readonly IVersionCatalogService    _versionCatalogService;
-    private readonly IDatabaseDiscoveryService _databaseDiscoveryService;
-    private readonly IInstanceSetupService     _instanceSetupService;
+    private readonly IInstanceRepository        _instanceRepository;
+    private readonly IVersionCatalogService     _versionCatalogService;
+    private readonly IDatabaseDiscoveryService  _databaseDiscoveryService;
+    private readonly IDatabaseVersionService    _databaseVersionService;
+    private readonly IInstanceSetupService      _instanceSetupService;
     private readonly ILaunchService            _launchService;
     private readonly IDialogService            _dialogService;
     private readonly ILogService               _log;
@@ -46,6 +47,7 @@ public class ExecutarEcoViewModel : ViewModelBase
         IInstanceRepository instanceRepository,
         IVersionCatalogService versionCatalogService,
         IDatabaseDiscoveryService databaseDiscoveryService,
+        IDatabaseVersionService databaseVersionService,
         IInstanceSetupService instanceSetupService,
         ILaunchService launchService,
         IDialogService dialogService,
@@ -54,6 +56,7 @@ public class ExecutarEcoViewModel : ViewModelBase
         _instanceRepository       = instanceRepository;
         _versionCatalogService    = versionCatalogService;
         _databaseDiscoveryService = databaseDiscoveryService;
+        _databaseVersionService   = databaseVersionService;
         _instanceSetupService     = instanceSetupService;
         _launchService            = launchService;
         _dialogService            = dialogService;
@@ -96,6 +99,7 @@ public class ExecutarEcoViewModel : ViewModelBase
         FlyoutVM = new InstanceFlyoutViewModel(
             _versionCatalogService,
             _databaseDiscoveryService,
+            _databaseVersionService,
             _instanceSetupService,
             async instancia =>
             {
@@ -116,6 +120,7 @@ public class ExecutarEcoViewModel : ViewModelBase
         FlyoutVM = new InstanceFlyoutViewModel(
             _versionCatalogService,
             _databaseDiscoveryService,
+            _databaseVersionService,
             _instanceSetupService,
             async instanciaEditada =>
             {

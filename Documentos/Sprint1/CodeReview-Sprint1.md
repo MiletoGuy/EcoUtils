@@ -51,7 +51,7 @@ de instâncias que não existem mais.
 
 ---
 
-### CR-02 — `CarregarInstanciasAsync` fire-and-forget sem tratamento para erros inesperados
+### CR-02 — `CarregarInstanciasAsync` fire-and-forget sem tratamento para erros inesperados ✅ Resolvido
 
 **Arquivo:** `ViewModels/ExecutarEcoViewModel.cs`
 
@@ -76,13 +76,15 @@ vazios sem nenhuma mensagem ao usuário.
 **Correção:** Envolver o corpo dos dois métodos em `try/catch (Exception ex)` e logar/exibir
 o erro. No caso de `CarregarInstanciasAsync`, notificar via `_dialogService.Notificar`.
 
+> **✅ Resolvido** — `CarregarInstanciasAsync` em `ExecutarEcoViewModel` agora captura qualquer exceção, loga via `_log.Error` e notifica o usuário com `_dialogService.Notificar`. `CarregarDadosAsync` em `InstanceFlyoutViewModel` captura e expõe via `ErroConfirmacao` (exibido inline na view).
+
 ---
 
 ## 🟠 P1 — Alto
 
 ---
 
-### CR-03 — Caminhos hardcoded em `EcoPathConstants`
+### CR-03 — Caminhos hardcoded em `EcoPathConstants` ✅ Resolvido
 
 **Arquivo:** `Infrastructure/EcoPathConstants.cs`
 
@@ -109,6 +111,8 @@ recompilação. O `EcoServerHost` hardcoded impede uso com servidor remoto.
 - Ou realizar lookup no registro do Windows (onde o ECO normalmente registra seu diretório
   de instalação).
 - Expor um painel de configurações mínimo para o usuário definir os caminhos.
+
+> **✅ Resolvido** — `EcoPathConstants` convertido de `const` para `static { get; set; }` com defaults hardcoded. Caminhos derivados (`UtilsDir`, `EcoIniPadrao`, `LogPath`) viram propriedades computadas. Novo `EcoSettings.cs` (POCO) e `appsettings.json` (copiado para output com `PreserveNewest`). `App.xaml.cs` chama `CarregarConfiguracoes()` antes do DI: lê o JSON com `System.Text.Json` e aplica cada campo não-vazio sobre `EcoPathConstants`, ignorando silenciosamente arquivos ausentes ou inválidos.
 
 ---
 
@@ -143,7 +147,7 @@ com o mesmo executável.
 
 ---
 
-### CR-05 — `AtualizarStatusIni` valida existência do arquivo, não seu conteúdo ⚠️ Parcialmente Resolvido
+### CR-05 — `AtualizarStatusIni` valida existência do arquivo, não seu conteúdo ✅ Resolvido
 
 **Arquivo:** `ViewModels/InstanceFlyoutViewModel.cs`, ~~`Services/IniGeneratorService.cs`~~ → `Services/InstanceSetupService.cs`
 
@@ -163,7 +167,7 @@ e só descobre o problema ao confirmar.
   presença da chave `dados=` na seção `[windows]`.
 - Chamar em `AtualizarStatusIni` e ajustar `StatusIni` com a mensagem específica do problema.
 
-> **⚠️ Parcialmente resolvido — commit `a34f61c`** — `InstanceSetupService.ImplantarAsync` lança `InvalidOperationException` se `dados=` não for encontrado na seção `[windows]`, com o erro exibido via `ErroConfirmacao`. Contudo, `AtualizarStatusIni` ainda verifica apenas `File.Exists` — a validação do conteúdo só ocorre após o clique em Confirmar, sem aviso antecipado no formulário.
+> **✅ Resolvido** — `IInstanceSetupService` recebeu `ValidarEcoIniAsync()`, que lê o template e verifica a presença de `dados=` na seção `[windows]`. `AtualizarStatusIni` foi convertido em `AtualizarStatusIniAsync` e chama este método no setter de `ExecutavelSelecionado` (fire-and-forget), exibindo mensagem distinta para cada caso: arquivo não encontrado, conteúdo inválido, ou válido. O botão Confirmar só é habilitado quando o conteúdo é válido.
 
 ---
 
@@ -435,10 +439,10 @@ em `AtualizarStatusIni`, que é a que efetivamente controla o estado do formulá
 | ID | Prioridade | Status | Descrição Resumida | Arquivo Principal |
 |----|-----------|--------|-------------------|-------------------|
 | CR-01 | 🔴 P0 | ✅ Resolvido | `RemoverIni` nunca chamado ao excluir | `ExecutarEcoViewModel.cs` |
-| CR-02 | 🔴 P0 | 🔓 Aberto | Fire-and-forget sem catch para erros inesperados | `ExecutarEcoViewModel.cs` |
-| CR-03 | 🟠 P1 | 🔓 Aberto | Caminhos hardcoded — zero portabilidade | `EcoPathConstants.cs` |
+| CR-02 | 🔴 P0 | ✅ Resolvido | Fire-and-forget sem catch para erros inesperados | `ExecutarEcoViewModel.cs` |
+| CR-03 | 🟠 P1 | ✅ Resolvido | Caminhos hardcoded — zero portabilidade | `EcoPathConstants.cs` |
 | CR-04 | 🟠 P1 | ✅ Resolvido | `.ini` sobrescrito ao editar; colisão por nome de exe | `InstanceSetupService.cs` |
-| CR-05 | 🟠 P1 | ⚠️ Parcial | Validação do `eco.ini` incompleta (só existência) | `InstanceFlyoutViewModel.cs` |
+| CR-05 | 🟠 P1 | ✅ Resolvido | Validação do `eco.ini` incompleta (só existência) | `InstanceFlyoutViewModel.cs` |
 | CR-06 | 🟠 P1 | ✅ Resolvido | Duas instâncias com mesmo exe compartilham `.ini` | `InstanceSetupService.cs` |
 | CR-07 | 🟡 P2 | 🔓 Aberto | Seleção nativa do `ListBox` conflita com dark theme | `ExecutarEcoView.xaml` |
 | CR-08 | 🟡 P2 | 🔓 Aberto | Log usa `DateTime.Now` em vez de UTC | `LogService.cs` |

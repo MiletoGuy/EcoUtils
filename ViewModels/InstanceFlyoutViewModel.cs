@@ -13,6 +13,7 @@ public class InstanceFlyoutViewModel : ViewModelBase
 {
     private readonly IVersionCatalogService       _versionCatalogService;
     private readonly IDatabaseDiscoveryService    _databaseDiscoveryService;
+    private readonly IDatabaseVersionService      _databaseVersionService;
     private readonly IInstanceSetupService        _instanceSetupService;
     private readonly Func<EcoInstance, Task>      _onConfirmado;
     private readonly Action                       _fecharFlyout;
@@ -48,6 +49,7 @@ public class InstanceFlyoutViewModel : ViewModelBase
         {
             SetProperty(ref _executavelSelecionado, value);
             _ = AtualizarStatusIniAsync();
+            _ = AtualizarStatusVersaoAsync();
             ConfirmarCommand.RaiseCanExecuteChanged();
         }
     }
@@ -58,7 +60,12 @@ public class InstanceFlyoutViewModel : ViewModelBase
     public EcoDatabase? BancoSelecionado
     {
         get => _bancoSelecionado;
-        set { SetProperty(ref _bancoSelecionado, value); ConfirmarCommand.RaiseCanExecuteChanged(); }
+        set
+        {
+            SetProperty(ref _bancoSelecionado, value);
+            _ = AtualizarStatusVersaoAsync();
+            ConfirmarCommand.RaiseCanExecuteChanged();
+        }
     }
 
     private string _statusIni = string.Empty;
@@ -73,6 +80,21 @@ public class InstanceFlyoutViewModel : ViewModelBase
     {
         get => _ecoIniValido;
         private set { SetProperty(ref _ecoIniValido, value); ConfirmarCommand.RaiseCanExecuteChanged(); }
+    }
+
+    private string _statusVersao = string.Empty;
+    public string StatusVersao
+    {
+        get => _statusVersao;
+        private set => SetProperty(ref _statusVersao, value);
+    }
+
+    // null = indeterminado (ainda consultando ou campos vazios); true = compatível; false = incompatível
+    private bool? _versaoCompativel;
+    public bool? VersaoCompativel
+    {
+        get => _versaoCompativel;
+        private set => SetProperty(ref _versaoCompativel, value);
     }
 
     private string? _erroConfirmacao;
@@ -101,6 +123,7 @@ public class InstanceFlyoutViewModel : ViewModelBase
     public InstanceFlyoutViewModel(
         IVersionCatalogService versionCatalogService,
         IDatabaseDiscoveryService databaseDiscoveryService,
+        IDatabaseVersionService databaseVersionService,
         IInstanceSetupService instanceSetupService,
         Func<EcoInstance, Task> onConfirmado,
         Action fecharFlyout,
@@ -109,6 +132,7 @@ public class InstanceFlyoutViewModel : ViewModelBase
     {
         _versionCatalogService    = versionCatalogService;
         _databaseDiscoveryService = databaseDiscoveryService;
+        _databaseVersionService   = databaseVersionService;
         _instanceSetupService     = instanceSetupService;
         _onConfirmado             = onConfirmado;
         _fecharFlyout             = fecharFlyout;
@@ -146,7 +170,58 @@ public class InstanceFlyoutViewModel : ViewModelBase
         }
     }
 
-private async System.Threading.Tasks.Task AtualizarStatusIniAsync()
+private async System.Threading.Tasks.Task AtualizarStatusVersaoAsync()
+    {
+        if (BancoSelecionado is null || ExecutavelSelecionado is null)
+        {
+            StatusVersao     = string.Empty;
+            VersaoCompativel = null;
+            return;
+        }
+
+        StatusVersao     = "Consultando versão do banco...";
+        VersaoCompativel = null;
+
+        var versaoBancoRaw = await _databaseVersionService.ConsultarVersaoAsync(BancoSelecionado.EcoPath);
+        if (versaoBancoRaw is null)
+        {
+            StatusVersao     = "Não foi possível consultar a versão do banco.";
+            VersaoCompativel = null;
+            return;
+        }
+
+        var versaoBanco = ExtrairVersaoBanco(versaoBancoRaw);
+        var versaoExe   = ExtrairVersaoExe(ExecutavelSelecionado.NomeCompleto);
+
+        if (versaoBanco is null || versaoExe is null)
+        {
+            StatusVersao     = $"Versão do banco: {versaoBancoRaw} (formato não reconhecido para comparação).";
+            VersaoCompativel = null;
+            return;
+        }
+
+        VersaoCompativel = string.Equals(versaoBanco, versaoExe, StringComparison.Ordinal);
+        StatusVersao = VersaoCompativel == true
+            ? $"Versão {versaoExe} — banco e executável compatíveis."
+            : $"Incompatibilidade de versão: banco v{versaoBanco} × executável v{versaoExe}.";
+    }
+
+    // "14650000" → "650"  (ignora os 2 primeiros dígitos do major e os 3 últimos do patch)
+    private static string? ExtrairVersaoBanco(string versaoBancoRaw)
+    {
+        if (versaoBancoRaw.Length > 5 && versaoBancoRaw.All(char.IsDigit))
+            return versaoBancoRaw.Substring(2, versaoBancoRaw.Length - 5);
+        return null;
+    }
+
+    // "Eco_650_10" → "650"  (primeiro segmento numérico após "Eco_")
+    private static string? ExtrairVersaoExe(string nomeCompleto)
+    {
+        var partes = nomeCompleto.Split('_');
+        return partes.Length >= 2 ? partes[1] : null;
+    }
+
+    private async System.Threading.Tasks.Task AtualizarStatusIniAsync()
     {
         if (ExecutavelSelecionado is null)
         {
