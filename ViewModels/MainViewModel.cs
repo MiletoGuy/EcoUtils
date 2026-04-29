@@ -17,9 +17,10 @@ public class MainViewModel : ViewModelBase
 
     public MainViewModel()
     {
-        IInstanceRepository       instanceRepo    = new InstanceRepository();
-        IVersionCatalogService    versionService  = new VersionCatalogService();
-        IDatabaseDiscoveryService databaseService = new DatabaseDiscoveryService();
+        ILogService               log             = new LogService();
+        IInstanceRepository       instanceRepo    = new InstanceRepository(log);
+        IVersionCatalogService    versionService  = new VersionCatalogService(log);
+        IDatabaseDiscoveryService databaseService = new DatabaseDiscoveryService(log);
         IIniGeneratorService      iniService      = new IniGeneratorService();
         ILaunchService            launchService   = new LaunchService();
         IDialogService            dialogService   = new DialogService();

@@ -7,6 +7,10 @@ namespace EcoUtils.Services;
 
 public class DatabaseDiscoveryService : IDatabaseDiscoveryService
 {
+    private readonly ILogService _log;
+
+    public DatabaseDiscoveryService(ILogService log) => _log = log;
+
     public async Task<IReadOnlyList<EcoDatabase>> ListarBancosAsync()
     {
         return await Task.Run<IReadOnlyList<EcoDatabase>>(() =>
@@ -29,6 +33,7 @@ public class DatabaseDiscoveryService : IDatabaseDiscoveryService
             }
             catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
             {
+                _log.Error(nameof(DatabaseDiscoveryService) + "." + nameof(ListarBancosAsync), ex);
                 return Array.Empty<EcoDatabase>();
             }
         });

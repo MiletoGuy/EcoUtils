@@ -13,6 +13,10 @@ public class InstanceRepository : IInstanceRepository
         WriteIndented = true
     };
 
+    private readonly ILogService _log;
+
+    public InstanceRepository(ILogService log) => _log = log;
+
     private static string ArquivoPath =>
         Path.Combine(EcoPathConstants.AppDataDir, "instancias.json");
 
@@ -31,6 +35,7 @@ public class InstanceRepository : IInstanceRepository
         }
         catch (Exception ex) when (ex is IOException or JsonException or UnauthorizedAccessException)
         {
+            _log.Error(nameof(InstanceRepository) + "." + nameof(CarregarAsync), ex);
             return Array.Empty<EcoInstance>();
         }
     }

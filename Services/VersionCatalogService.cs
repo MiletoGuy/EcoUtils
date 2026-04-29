@@ -11,6 +11,10 @@ public class VersionCatalogService : IVersionCatalogService
     private static readonly Regex _exeRegex =
         new(@"^Eco_\d+_\d+\.exe$", RegexOptions.IgnoreCase | RegexOptions.Compiled);
 
+    private readonly ILogService _log;
+
+    public VersionCatalogService(ILogService log) => _log = log;
+
     public async Task<IReadOnlyList<EcoExecutavel>> ListarExecutaveisAsync()
     {
         return await Task.Run<IReadOnlyList<EcoExecutavel>>(() =>
@@ -37,6 +41,7 @@ public class VersionCatalogService : IVersionCatalogService
             }
             catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
             {
+                _log.Error(nameof(VersionCatalogService) + "." + nameof(ListarExecutaveisAsync), ex);
                 return Array.Empty<EcoExecutavel>();
             }
         });
