@@ -30,7 +30,7 @@ public class InstanceFlyoutViewModel : ViewModelBase
         {
             SetProperty(ref _apelido, value);
             OnPropertyChanged(nameof(ApelidoDuplicado));
-            OnPropertyChanged(nameof(PodeConfirmar));
+            ConfirmarCommand.RaiseCanExecuteChanged();
         }
     }
 
@@ -48,7 +48,7 @@ public class InstanceFlyoutViewModel : ViewModelBase
         {
             SetProperty(ref _executavelSelecionado, value);
             AtualizarStatusIni();
-            OnPropertyChanged(nameof(PodeConfirmar));
+            ConfirmarCommand.RaiseCanExecuteChanged();
         }
     }
 
@@ -58,7 +58,7 @@ public class InstanceFlyoutViewModel : ViewModelBase
     public EcoDatabase? BancoSelecionado
     {
         get => _bancoSelecionado;
-        set { SetProperty(ref _bancoSelecionado, value); OnPropertyChanged(nameof(PodeConfirmar)); }
+        set { SetProperty(ref _bancoSelecionado, value); ConfirmarCommand.RaiseCanExecuteChanged(); }
     }
 
     private string _statusIni = string.Empty;
@@ -72,7 +72,7 @@ public class InstanceFlyoutViewModel : ViewModelBase
     public bool EcoIniValido
     {
         get => _ecoIniValido;
-        private set { SetProperty(ref _ecoIniValido, value); OnPropertyChanged(nameof(PodeConfirmar)); }
+        private set { SetProperty(ref _ecoIniValido, value); ConfirmarCommand.RaiseCanExecuteChanged(); }
     }
 
     private string? _erroConfirmacao;
@@ -95,8 +95,8 @@ public class InstanceFlyoutViewModel : ViewModelBase
         BancoSelecionado is not null         &&
         EcoIniValido;
 
-    public ICommand ConfirmarCommand { get; }
     public ICommand CancelarCommand  { get; }
+    public AsyncRelayCommand ConfirmarCommand { get; }
 
     public InstanceFlyoutViewModel(
         IVersionCatalogService versionCatalogService,

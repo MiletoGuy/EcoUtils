@@ -29,7 +29,7 @@ public class IniGeneratorService : IIniGeneratorService
 
             if (dentroWindowsSection && linha.StartsWith("dados=", StringComparison.OrdinalIgnoreCase))
             {
-                linhas[i] = $"dados=127.0.0.1:{basePath}";
+                linhas[i] = $"dados={EcoPathConstants.EcoServerHost}:{basePath}";
                 substituido = true;
             }
         }
