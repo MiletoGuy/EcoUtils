@@ -25,7 +25,6 @@ public partial class App : Application
         // Domain services
         sc.AddSingleton<IVersionCatalogService,    VersionCatalogService>();
         sc.AddSingleton<IDatabaseDiscoveryService, DatabaseDiscoveryService>();
-        sc.AddSingleton<IIniGeneratorService,      IniGeneratorService>();
         sc.AddSingleton<IInstanceSetupService,     InstanceSetupService>();
         sc.AddSingleton<ILaunchService,            LaunchService>();
         sc.AddSingleton<IDialogService,            DialogService>();

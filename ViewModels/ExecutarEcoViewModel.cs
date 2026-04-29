@@ -14,7 +14,7 @@ public class ExecutarEcoViewModel : ViewModelBase
     private readonly IInstanceRepository       _instanceRepository;
     private readonly IVersionCatalogService    _versionCatalogService;
     private readonly IDatabaseDiscoveryService _databaseDiscoveryService;
-    private readonly IIniGeneratorService      _iniGeneratorService;
+    private readonly IInstanceSetupService     _instanceSetupService;
     private readonly ILaunchService            _launchService;
     private readonly IDialogService            _dialogService;
     private readonly ILogService               _log;
@@ -46,7 +46,7 @@ public class ExecutarEcoViewModel : ViewModelBase
         IInstanceRepository instanceRepository,
         IVersionCatalogService versionCatalogService,
         IDatabaseDiscoveryService databaseDiscoveryService,
-        IIniGeneratorService iniGeneratorService,
+        IInstanceSetupService instanceSetupService,
         ILaunchService launchService,
         IDialogService dialogService,
         ILogService log)
@@ -54,7 +54,7 @@ public class ExecutarEcoViewModel : ViewModelBase
         _instanceRepository       = instanceRepository;
         _versionCatalogService    = versionCatalogService;
         _databaseDiscoveryService = databaseDiscoveryService;
-        _iniGeneratorService      = iniGeneratorService;
+        _instanceSetupService     = instanceSetupService;
         _launchService            = launchService;
         _dialogService            = dialogService;
         _log                      = log;
@@ -87,7 +87,7 @@ public class ExecutarEcoViewModel : ViewModelBase
         FlyoutVM = new InstanceFlyoutViewModel(
             _versionCatalogService,
             _databaseDiscoveryService,
-            _iniGeneratorService,
+            _instanceSetupService,
             async instancia =>
             {
                 Instancias.Add(instancia);
@@ -107,7 +107,7 @@ public class ExecutarEcoViewModel : ViewModelBase
         FlyoutVM = new InstanceFlyoutViewModel(
             _versionCatalogService,
             _databaseDiscoveryService,
-            _iniGeneratorService,
+            _instanceSetupService,
             async instanciaEditada =>
             {
                 var idx = Instancias.IndexOf(instancia);
@@ -125,6 +125,7 @@ public class ExecutarEcoViewModel : ViewModelBase
         if (!_dialogService.Confirmar("Excluir instância", $"Excluir \"{instancia.Apelido}\"?", "Excluir"))
             return;
 
+        _instanceSetupService.Remover(instancia.ExecutavelPath, instancia.IniPath);
         Instancias.Remove(instancia);
         await _instanceRepository.SalvarAsync(new List<EcoInstance>(Instancias));
     }

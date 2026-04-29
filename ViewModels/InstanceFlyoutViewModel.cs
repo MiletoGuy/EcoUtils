@@ -13,7 +13,7 @@ public class InstanceFlyoutViewModel : ViewModelBase
 {
     private readonly IVersionCatalogService       _versionCatalogService;
     private readonly IDatabaseDiscoveryService    _databaseDiscoveryService;
-    private readonly IIniGeneratorService         _iniGeneratorService;
+    private readonly IInstanceSetupService        _instanceSetupService;
     private readonly Func<EcoInstance, Task>      _onConfirmado;
     private readonly Action                       _fecharFlyout;
     private readonly EcoInstance?                 _instanciaExistente;
@@ -101,7 +101,7 @@ public class InstanceFlyoutViewModel : ViewModelBase
     public InstanceFlyoutViewModel(
         IVersionCatalogService versionCatalogService,
         IDatabaseDiscoveryService databaseDiscoveryService,
-        IIniGeneratorService iniGeneratorService,
+        IInstanceSetupService instanceSetupService,
         Func<EcoInstance, Task> onConfirmado,
         Action fecharFlyout,
         IReadOnlyCollection<string> apelidosExistentes,
@@ -109,7 +109,7 @@ public class InstanceFlyoutViewModel : ViewModelBase
     {
         _versionCatalogService    = versionCatalogService;
         _databaseDiscoveryService = databaseDiscoveryService;
-        _iniGeneratorService      = iniGeneratorService;
+        _instanceSetupService     = instanceSetupService;
         _onConfirmado             = onConfirmado;
         _fecharFlyout             = fecharFlyout;
         _apelidosExistentes       = apelidosExistentes;
@@ -134,7 +134,7 @@ public class InstanceFlyoutViewModel : ViewModelBase
 
         if (_instanciaExistente is not null)
         {
-            ExecutavelSelecionado = Executaveis.FirstOrDefault(e => e.ExePath == _instanciaExistente.ExecutavelPath);
+            ExecutavelSelecionado = Executaveis.FirstOrDefault(e => e.ExePath == _instanciaExistente.ExecutavelFontePath);
             BancoSelecionado      = Bancos.FirstOrDefault(b => b.EcoPath == _instanciaExistente.BasePath);
         }
     }
@@ -163,19 +163,42 @@ public class InstanceFlyoutViewModel : ViewModelBase
 
         try
         {
-            string iniPath = await _iniGeneratorService.GerarIniAsync(
-                ExecutavelSelecionado!.NomeCompleto,
-                BancoSelecionado!.EcoPath);
+            string exePath;
+            string iniPath;
+
+            bool fonteAlterada = _instanciaExistente is null
+                || _instanciaExistente.ExecutavelFontePath != ExecutavelSelecionado!.ExePath
+                || _instanciaExistente.BasePath            != BancoSelecionado!.EcoPath;
+
+            if (fonteAlterada)
+            {
+                // Remove arquivos implantados anteriores (no-op em criação nova)
+                if (_instanciaExistente is not null)
+                    _instanceSetupService.Remover(
+                        _instanciaExistente.ExecutavelPath,
+                        _instanciaExistente.IniPath);
+
+                (exePath, iniPath) = await _instanceSetupService.ImplantarAsync(
+                    ExecutavelSelecionado!.ExePath,
+                    BancoSelecionado!.EcoPath);
+            }
+            else
+            {
+                // Executável e base não mudaram — reutiliza os arquivos já implantados
+                exePath = _instanciaExistente!.ExecutavelPath;
+                iniPath = _instanciaExistente.IniPath;
+            }
 
             var instancia = new EcoInstance
             {
-                Id             = _instanciaExistente?.Id ?? Guid.NewGuid(),
-                Apelido        = Apelido.Trim(),
-                ExecutavelPath = ExecutavelSelecionado.ExePath,
-                ExecutavelNome = ExecutavelSelecionado.NomeCompleto,
-                BasePath       = BancoSelecionado.EcoPath,
-                BaseNome       = BancoSelecionado.NomeCompleto,
-                IniPath        = iniPath
+                Id                  = _instanciaExistente?.Id ?? Guid.NewGuid(),
+                Apelido             = Apelido.Trim(),
+                ExecutavelPath      = exePath,
+                ExecutavelFontePath = ExecutavelSelecionado!.ExePath,
+                ExecutavelNome      = ExecutavelSelecionado.NomeCompleto,
+                BasePath            = BancoSelecionado!.EcoPath,
+                BaseNome            = BancoSelecionado.NomeCompleto,
+                IniPath             = iniPath
             };
 
             await _onConfirmado(instancia);
