@@ -23,13 +23,17 @@ public class InstanceFlyoutViewModel : ViewModelBase
     public string Titulo              => _instanciaExistente is null ? "Nova Instância ECO" : "Editar Instância";
     public string TextoBotaoConfirmar => _instanciaExistente is null ? "Confirmar"          : "Salvar";
 
-    private string _apelido = string.Empty;
+    private string _apelido              = string.Empty;
+    private bool   _apelidoAutoPreenchido = false;
+    private bool   _autoFillingApelido    = false;
+
     public string Apelido
     {
         get => _apelido;
         set
         {
             SetProperty(ref _apelido, value);
+            if (!_autoFillingApelido) _apelidoAutoPreenchido = false;
             OnPropertyChanged(nameof(ApelidoDuplicado));
             ConfirmarCommand.RaiseCanExecuteChanged();
         }
@@ -49,7 +53,7 @@ public class InstanceFlyoutViewModel : ViewModelBase
         {
             SetProperty(ref _executavelSelecionado, value);
             _ = AtualizarStatusIniAsync();
-            _ = AtualizarStatusVersaoAsync();
+            AtualizarCompatibilidade();
             ConfirmarCommand.RaiseCanExecuteChanged();
         }
     }
@@ -63,7 +67,14 @@ public class InstanceFlyoutViewModel : ViewModelBase
         set
         {
             SetProperty(ref _bancoSelecionado, value);
-            _ = AtualizarStatusVersaoAsync();
+            if (value is not null && (_apelidoAutoPreenchido || string.IsNullOrWhiteSpace(_apelido)))
+            {
+                _autoFillingApelido    = true;
+                Apelido                = value.NomeCompleto;
+                _apelidoAutoPreenchido = true;
+                _autoFillingApelido    = false;
+            }
+            _ = AtualizarStatusBancoAsync();
             ConfirmarCommand.RaiseCanExecuteChanged();
         }
     }
@@ -80,6 +91,13 @@ public class InstanceFlyoutViewModel : ViewModelBase
     {
         get => _ecoIniValido;
         private set { SetProperty(ref _ecoIniValido, value); ConfirmarCommand.RaiseCanExecuteChanged(); }
+    }
+
+    private string _statusBancoVersao = string.Empty;
+    public string StatusBancoVersao
+    {
+        get => _statusBancoVersao;
+        private set => SetProperty(ref _statusBancoVersao, value);
     }
 
     private string _statusVersao = string.Empty;
@@ -172,34 +190,52 @@ public class InstanceFlyoutViewModel : ViewModelBase
         }
     }
 
-private async System.Threading.Tasks.Task AtualizarStatusVersaoAsync()
+    private async System.Threading.Tasks.Task AtualizarStatusBancoAsync()
     {
-        if (BancoSelecionado is null || ExecutavelSelecionado is null)
+        if (BancoSelecionado is null)
         {
-            StatusVersao     = string.Empty;
-            VersaoCompativel = null;
-            _versaoBancoRaw  = null;
+            _versaoBancoRaw   = null;
+            StatusBancoVersao = string.Empty;
+            AtualizarCompatibilidade();
             return;
         }
 
-        StatusVersao     = "Consultando versão do banco...";
-        VersaoCompativel = null;
+        StatusBancoVersao = "Consultando versão...";
+        _versaoBancoRaw   = null;
 
         var versaoBancoRaw = await _databaseVersionService.ConsultarVersaoAsync(BancoSelecionado.EcoPath);
         _versaoBancoRaw = versaoBancoRaw;
+
         if (versaoBancoRaw is null)
         {
-            StatusVersao     = "Não foi possível consultar a versão do banco.";
+            StatusBancoVersao = "Não foi possível consultar a versão do banco.";
+        }
+        else
+        {
+            var versao = ExtrairVersaoBanco(versaoBancoRaw);
+            StatusBancoVersao = versao is not null
+                ? $"Versão {versao}"
+                : $"Versão: {versaoBancoRaw}";
+        }
+
+        AtualizarCompatibilidade();
+    }
+
+    private void AtualizarCompatibilidade()
+    {
+        if (BancoSelecionado is null || ExecutavelSelecionado is null || _versaoBancoRaw is null)
+        {
+            StatusVersao     = string.Empty;
             VersaoCompativel = null;
             return;
         }
 
-        var versaoBanco = ExtrairVersaoBanco(versaoBancoRaw);
+        var versaoBanco = ExtrairVersaoBanco(_versaoBancoRaw);
         var versaoExe   = ExtrairVersaoExe(ExecutavelSelecionado.NomeCompleto);
 
         if (versaoBanco is null || versaoExe is null)
         {
-            StatusVersao     = $"Versão do banco: {versaoBancoRaw} (formato não reconhecido para comparação).";
+            StatusVersao     = $"Formato de versão não reconhecido para comparação.";
             VersaoCompativel = null;
             return;
         }
@@ -207,7 +243,7 @@ private async System.Threading.Tasks.Task AtualizarStatusVersaoAsync()
         VersaoCompativel = string.Equals(versaoBanco, versaoExe, StringComparison.Ordinal);
         StatusVersao = VersaoCompativel == true
             ? $"Versão {versaoExe} — banco e executável compatíveis."
-            : $"Incompatibilidade de versão: banco v{versaoBanco} × executável v{versaoExe}.";
+            : $"Incompatibilidade: banco v{versaoBanco} × executável v{versaoExe}.";
     }
 
     // "14650000" → "650"  (ignora os 2 primeiros dígitos do major e os 3 últimos do patch)

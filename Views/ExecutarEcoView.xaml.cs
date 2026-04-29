@@ -46,7 +46,9 @@ public partial class ExecutarEcoView : UserControl
         if (e.PropertyName is
             nameof(ExecutarEcoViewModel.ColWidthApelido)    or
             nameof(ExecutarEcoViewModel.ColWidthExecutavel) or
-            nameof(ExecutarEcoViewModel.ColWidthBanco))
+            nameof(ExecutarEcoViewModel.ColWidthBanco)      or
+            nameof(ExecutarEcoViewModel.MostrarExecutavel)  or
+            nameof(ExecutarEcoViewModel.MostrarBanco))
         {
             _syncingHeader = true;
             SyncHeaderFromVm();
@@ -60,6 +62,8 @@ public partial class ExecutarEcoView : UserControl
         HeaderColApelido.Width    = Vm.ColWidthApelido;
         HeaderColExecutavel.Width = Vm.ColWidthExecutavel;
         HeaderColBanco.Width      = Vm.ColWidthBanco;
+        HeaderColExecutavel.MinWidth = Vm.MostrarExecutavel ? 150 : 0;
+        HeaderColBanco.MinWidth      = Vm.MostrarBanco      ? 150 : 0;
     }
 
     private void OnHeaderColChanged(object? sender, EventArgs e)

@@ -24,7 +24,22 @@
                    Margin="0,0,0,12"
                    Visibility="{Binding ApelidoDuplicado, Converter={StaticResource BoolToVisibility}}"/>
 
-        <!-- Executável -->
+        <!-- Banco de Dados -->
+        <TextBlock Text="Banco de Dados"
+                   Foreground="{StaticResource TextSecondary}"
+                   Margin="0,0,0,4"/>
+        <ComboBox ItemsSource="{Binding Bancos}"
+                  SelectedItem="{Binding BancoSelecionado}"
+                  DisplayMemberPath="NomeCompleto"
+                  Margin="0,0,0,4"/>
+
+        <!-- Versão do banco (exibida assim que banco é selecionado) -->
+        <TextBlock Text="{Binding StatusBancoVersao}"
+                   FontSize="11"
+                   Margin="0,0,0,16"
+                   Foreground="{StaticResource TextSecondary}"/>
+
+        <!-- Executável ECO -->
         <TextBlock Text="Executável ECO"
                    Foreground="{StaticResource TextSecondary}"
                    Margin="0,0,0,4"/>
@@ -36,7 +51,7 @@
         <!-- Status eco.ini -->
         <TextBlock Text="{Binding StatusIni}"
                    FontSize="11"
-                   Margin="0,0,0,16">
+                   Margin="0,0,0,6">
             <TextBlock.Style>
                 <Style TargetType="TextBlock">
                     <Setter Property="Foreground" Value="{StaticResource TextSecondary}"/>
@@ -52,16 +67,7 @@
             </TextBlock.Style>
         </TextBlock>
 
-        <!-- Banco de Dados -->
-        <TextBlock Text="Banco de Dados"
-                   Foreground="{StaticResource TextSecondary}"
-                   Margin="0,0,0,4"/>
-        <ComboBox ItemsSource="{Binding Bancos}"
-                  SelectedItem="{Binding BancoSelecionado}"
-                  DisplayMemberPath="NomeCompleto"
-                  Margin="0,0,0,6"/>
-
-        <!-- Status de versão banco × executável -->
+        <!-- Compatibilidade de versão banco × executável -->
         <TextBlock Text="{Binding StatusVersao}"
                    FontSize="11"
                    TextWrapping="Wrap"

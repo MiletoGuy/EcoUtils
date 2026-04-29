@@ -153,8 +153,8 @@
                 <Grid>
                     <Grid.ColumnDefinitions>
                         <ColumnDefinition x:Name="HeaderColApelido"    Width="2*" MinWidth="150"/>
-                        <ColumnDefinition x:Name="HeaderColExecutavel" Width="0"  MinWidth="150"/>
-                        <ColumnDefinition x:Name="HeaderColBanco"      Width="0"  MinWidth="150"/>
+                        <ColumnDefinition x:Name="HeaderColExecutavel" Width="0"/>
+                        <ColumnDefinition x:Name="HeaderColBanco"      Width="0"/>
                         <ColumnDefinition Width="{Binding MostrarVersao, Converter={StaticResource BoolToColumnWidth}, ConverterParameter=80}"/>
                         <ColumnDefinition Width="100"/>
                     </Grid.ColumnDefinitions>
@@ -336,7 +336,8 @@
                                         Margin="0,0,4,0"/>
                                 <Button Content="&#x2715;"
                                         Style="{StaticResource ButtonDanger}"
-                                        Padding="5,4"
+                                        Width="20" Height="20"
+                                        Padding="0"
                                         Command="{Binding DataContext.ExcluirCommand, RelativeSource={RelativeSource AncestorType=ListBox}}"
                                         CommandParameter="{Binding}"/>
                             </StackPanel>
