@@ -160,6 +160,94 @@
             </TextBlock.Style>
         </TextBlock>
 
+        <!-- Configurações do .ini — cabeçalho colapsável -->
+        <Button Command="{Binding ToggleIniExpandedCommand}"
+                BorderThickness="0"
+                Padding="0"
+                Cursor="Hand"
+                HorizontalAlignment="Stretch"
+                HorizontalContentAlignment="Stretch"
+                Margin="0,0,0,0">
+            <Button.Style>
+                <Style TargetType="Button" BasedOn="{StaticResource ButtonBase}">
+                    <Setter Property="Background" Value="Transparent"/>
+                    <Style.Triggers>
+                        <Trigger Property="IsMouseOver" Value="True">
+                            <Setter Property="Background" Value="Transparent"/>
+                        </Trigger>
+                    </Style.Triggers>
+                </Style>
+            </Button.Style>
+            <Grid>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="Auto"/>
+                    <ColumnDefinition Width="*"/>
+                </Grid.ColumnDefinitions>
+                <TextBlock Grid.Column="0"
+                           Foreground="{StaticResource TextSecondary}"
+                           FontSize="11">
+                    <TextBlock.Style>
+                        <Style TargetType="TextBlock">
+                            <Setter Property="Text" Value="▸ Configurações do .ini"/>
+                            <Style.Triggers>
+                                <DataTrigger Binding="{Binding IniExpanded}" Value="True">
+                                    <Setter Property="Text" Value="▾ Configurações do .ini"/>
+                                </DataTrigger>
+                            </Style.Triggers>
+                        </Style>
+                    </TextBlock.Style>
+                </TextBlock>
+                <Rectangle Grid.Column="1"
+                           Height="1"
+                           Fill="{StaticResource InputBorder}"
+                           VerticalAlignment="Center"
+                           Margin="6,0,0,0"/>
+            </Grid>
+        </Button>
+
+        <StackPanel Visibility="{Binding IniExpanded, Converter={StaticResource BoolToVisibility}}"
+                    Margin="0,10,0,0">
+
+            <!-- Título da seção -->
+            <TextBlock Text="[PREFERENCIAS]"
+                       Foreground="{StaticResource TextPrimary}"
+                       FontSize="12"
+                       FontWeight="SemiBold"
+                       Margin="0,0,0,10"/>
+
+            <!-- Usuário — label e input na mesma linha -->
+            <Grid Margin="0,0,0,10">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="Auto"/>
+                    <ColumnDefinition Width="*"/>
+                </Grid.ColumnDefinitions>
+                <TextBlock Grid.Column="0"
+                           Text="Usuário"
+                           Foreground="{StaticResource TextPrimary}"
+                           VerticalAlignment="Center"
+                           Margin="0,0,8,0"/>
+                <TextBox Grid.Column="1"
+                         Text="{Binding Usuario, UpdateSourceTrigger=PropertyChanged}"/>
+            </Grid>
+
+            <CheckBox Content="PesquisaTotalDosProdutos"
+                      IsChecked="{Binding PesquisaTotalDosProdutos}"
+                      Foreground="{StaticResource TextPrimary}"
+                      Margin="0,0,0,4"/>
+            <CheckBox Content="MonitorarTempoSelects"
+                      IsChecked="{Binding MonitorarTempoSelects}"
+                      Foreground="{StaticResource TextPrimary}"
+                      Margin="0,0,0,4"/>
+            <CheckBox Content="SincronizaTabelaPreco"
+                      IsChecked="{Binding SincronizaTabelaPreco}"
+                      Foreground="{StaticResource TextPrimary}"
+                      Margin="0,0,0,4"/>
+            <CheckBox Content="MultiplasInstancias"
+                      IsChecked="{Binding MultiplasInstancias}"
+                      Foreground="{StaticResource TextPrimary}"
+                      Margin="0,0,0,16"/>
+        </StackPanel>
+
         <!-- Erro de confirmação -->
         <TextBlock Text="{Binding ErroConfirmacao}"
                    Foreground="{StaticResource StatusError}"

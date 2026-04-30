@@ -2,6 +2,8 @@ using System;
 using System.ComponentModel;
 using System.Windows;
 using System.Windows.Controls;
+using System.Windows.Input;
+using System.Windows.Media;
 using EcoUtils.ViewModels;
 
 namespace EcoUtils.Views;
@@ -72,5 +74,16 @@ public partial class ExecutarEcoView : UserControl
         if (sender == HeaderColApelido)    Vm.ColWidthApelido    = HeaderColApelido.Width;
         if (sender == HeaderColExecutavel) Vm.ColWidthExecutavel = HeaderColExecutavel.Width;
         if (sender == HeaderColBanco)      Vm.ColWidthBanco      = HeaderColBanco.Width;
+    }
+
+    private void OnPreviewMouseLeftButtonDown(object sender, MouseButtonEventArgs e)
+    {
+        var hit = e.OriginalSource as DependencyObject;
+        while (hit is not null)
+        {
+            if (hit is ListBoxItem) return;
+            hit = VisualTreeHelper.GetParent(hit);
+        }
+        ListaInstancias.UnselectAll();
     }
 }

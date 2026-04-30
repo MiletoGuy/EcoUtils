@@ -6,7 +6,8 @@
         mc:Ignorable="d"
         Title="EcoUtils"
         Width="1024" Height="680"
-        MinWidth="800" MinHeight="520">
+        MinWidth="800" MinHeight="520"
+        >
 
     <Grid>
         <Grid.ColumnDefinitions>

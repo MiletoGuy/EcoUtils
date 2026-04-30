@@ -225,6 +225,64 @@ public class InstanceFlyoutViewModel : ViewModelBase
 
     public bool TemErroImportacaoExe => ErroImportacaoExe is not null;
 
+    // ── Configurações .ini [PREFERENCIAS] ───────────────────────
+    private bool _iniExpanded;
+    public bool IniExpanded
+    {
+        get => _iniExpanded;
+        private set
+        {
+            SetProperty(ref _iniExpanded, value);
+            OnPropertyChanged(nameof(TextoBotaoIni));
+        }
+    }
+
+    public string TextoBotaoIni => IniExpanded ? "Configurações do .ini ▴" : "Configurações do .ini ▸";
+
+    private string _usuario = "SUPERVISOR";
+    public string Usuario
+    {
+        get => _usuario;
+        set => SetProperty(ref _usuario, value);
+    }
+
+    private bool _pesquisaTotalDosProdutos = true;
+    public bool PesquisaTotalDosProdutos
+    {
+        get => _pesquisaTotalDosProdutos;
+        set => SetProperty(ref _pesquisaTotalDosProdutos, value);
+    }
+
+    private bool _monitorarTempoSelects;
+    public bool MonitorarTempoSelects
+    {
+        get => _monitorarTempoSelects;
+        set => SetProperty(ref _monitorarTempoSelects, value);
+    }
+
+    private bool _sincronizaTabelaPreco;
+    public bool SincronizaTabelaPreco
+    {
+        get => _sincronizaTabelaPreco;
+        set => SetProperty(ref _sincronizaTabelaPreco, value);
+    }
+
+    private bool _multiplasInstancias = true;
+    public bool MultiplasInstancias
+    {
+        get => _multiplasInstancias;
+        set => SetProperty(ref _multiplasInstancias, value);
+    }
+
+    private IniPreferencias BuildPreferencias() => new()
+    {
+        Usuario                  = Usuario.Trim(),
+        PesquisaTotalDosProdutos = PesquisaTotalDosProdutos,
+        MonitorarTempoSelects    = MonitorarTempoSelects,
+        SincronizaTabelaPreco    = SincronizaTabelaPreco,
+        MultiplasInstancias      = MultiplasInstancias,
+    };
+
     public bool PodeConfirmar =>
         !string.IsNullOrWhiteSpace(Apelido) &&
         !ApelidoDuplicado                   &&
@@ -238,6 +296,7 @@ public class InstanceFlyoutViewModel : ViewModelBase
     public AsyncRelayCommand ConfirmarCommand    { get; }
     public AsyncRelayCommand AdicionarBancoCommand { get; }
     public AsyncRelayCommand AdicionarExeCommand   { get; }
+    public ICommand ToggleIniExpandedCommand { get; }
 
     public InstanceFlyoutViewModel(
         IVersionCatalogService versionCatalogService,
@@ -273,6 +332,7 @@ public class InstanceFlyoutViewModel : ViewModelBase
         CancelarCommand       = new RelayCommand(_ => _fecharFlyout());
         AdicionarBancoCommand = new AsyncRelayCommand(async _ => await AdicionarBancoAsync(), _ => !IsImportandoBanco && !IsImportandoExe);
         AdicionarExeCommand   = new AsyncRelayCommand(async _ => await AdicionarExeAsync(),   _ => !IsImportandoBanco && !IsImportandoExe);
+        ToggleIniExpandedCommand = new RelayCommand(_ => IniExpanded = !IniExpanded);
 
         _ = CarregarDadosAsync();
     }
@@ -291,6 +351,16 @@ public class InstanceFlyoutViewModel : ViewModelBase
             {
                 ExecutavelSelecionado = Executaveis.FirstOrDefault(e => e.ExePath == _instanciaExistente.ExecutavelFontePath);
                 BancoSelecionado      = Bancos.FirstOrDefault(b => b.EcoPath == _instanciaExistente.BasePath);
+
+                if (File.Exists(_instanciaExistente.IniPath))
+                {
+                    var prefs = await _instanceSetupService.LerPreferenciasAsync(_instanciaExistente.IniPath);
+                    Usuario                  = prefs.Usuario;
+                    PesquisaTotalDosProdutos = prefs.PesquisaTotalDosProdutos;
+                    MonitorarTempoSelects    = prefs.MonitorarTempoSelects;
+                    SincronizaTabelaPreco    = prefs.SincronizaTabelaPreco;
+                    MultiplasInstancias      = prefs.MultiplasInstancias;
+                }
             }
         }
         catch (Exception ex)
@@ -609,6 +679,8 @@ public class InstanceFlyoutViewModel : ViewModelBase
             string exePath;
             string iniPath;
 
+            var prefs = BuildPreferencias();
+
             bool fonteAlterada = _instanciaExistente is null
                 || _instanciaExistente.ExecutavelFontePath != ExecutavelSelecionado!.ExePath
                 || _instanciaExistente.BasePath            != BancoSelecionado!.EcoPath;
@@ -623,13 +695,15 @@ public class InstanceFlyoutViewModel : ViewModelBase
 
                 (exePath, iniPath) = await _instanceSetupService.ImplantarAsync(
                     ExecutavelSelecionado!.ExePath,
-                    BancoSelecionado!.EcoPath);
+                    BancoSelecionado!.EcoPath,
+                    prefs);
             }
             else
             {
                 // Executável e base não mudaram — reutiliza os arquivos já implantados
                 exePath = _instanciaExistente!.ExecutavelPath;
                 iniPath = _instanciaExistente.IniPath;
+                await _instanceSetupService.AtualizarPreferenciasAsync(iniPath, prefs);
             }
 
             var instancia = new EcoInstance

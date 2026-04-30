@@ -1,6 +1,7 @@
 using System.IO;
 using System.Text.RegularExpressions;
 using EcoUtils.Infrastructure;
+using EcoUtils.Models;
 using EcoUtils.Services.Interfaces;
 
 namespace EcoUtils.Services;
@@ -13,7 +14,8 @@ public class InstanceSetupService : IInstanceSetupService
 
     public async Task<(string ExePath, string IniPath)> ImplantarAsync(
         string exeFontePath,
-        string basePath)
+        string basePath,
+        IniPreferencias preferencias)
     {
         // 1. Deriva nome base: "Eco_650_10" → "eco_650_10"
         var nomeBase = "eco_" + Path.GetFileNameWithoutExtension(exeFontePath)
@@ -52,10 +54,13 @@ public class InstanceSetupService : IInstanceSetupService
             throw new InvalidOperationException(
                 "Chave 'dados=' não encontrada na seção [windows] do eco.ini padrão.");
 
-        // 4. Copia executável (overwrite: false protege contra condição de corrida)
+        // 4. Aplica parâmetros de [PREFERENCIAS]
+        linhas = AplicarPreferencias(linhas, preferencias);
+
+        // 5. Copia executável (overwrite: false protege contra condição de corrida)
         File.Copy(exeFontePath, exeDestPath, overwrite: false);
 
-        // 5. Grava .ini
+        // 6. Grava .ini
         await File.WriteAllLinesAsync(iniDestPath, linhas);
 
         return (exeDestPath, iniDestPath);
@@ -95,6 +100,129 @@ public class InstanceSetupService : IInstanceSetupService
         catch { /* inacessível ou corrompido — considerado inválido */ }
 
         return false;
+    }
+
+    public async Task<IniPreferencias> LerPreferenciasAsync(string iniPath)
+    {
+        var prefs = new IniPreferencias
+        {
+            Usuario                  = string.Empty,
+            PesquisaTotalDosProdutos = false,
+            MonitorarTempoSelects    = false,
+            SincronizaTabelaPreco    = false,
+            MultiplasInstancias      = false,
+        };
+
+        if (!File.Exists(iniPath))
+            return prefs;
+
+        try
+        {
+            var linhas = await File.ReadAllLinesAsync(iniPath);
+            bool dentroPrefs = false;
+
+            foreach (var linha in linhas)
+            {
+                var t = linha.Trim();
+
+                if (t.StartsWith('['))
+                {
+                    dentroPrefs = t.Equals("[preferencias]", StringComparison.OrdinalIgnoreCase);
+                    continue;
+                }
+
+                if (!dentroPrefs) continue;
+
+                var eqIdx = t.IndexOf('=');
+                if (eqIdx <= 0) continue;
+
+                var key = t.Substring(0, eqIdx);
+                var val = t.Substring(eqIdx + 1).Trim();
+
+                if      (key.Equals("usuario",                  StringComparison.OrdinalIgnoreCase))
+                    prefs.Usuario = val;
+                else if (key.Equals("PesquisaTotalDosProdutos", StringComparison.OrdinalIgnoreCase))
+                    prefs.PesquisaTotalDosProdutos = val.Equals("S", StringComparison.OrdinalIgnoreCase);
+                else if (key.Equals("MonitorarTempoSelects",    StringComparison.OrdinalIgnoreCase))
+                    prefs.MonitorarTempoSelects = val.Equals("S", StringComparison.OrdinalIgnoreCase);
+                else if (key.Equals("SincronizaTabelaPreco",    StringComparison.OrdinalIgnoreCase))
+                    prefs.SincronizaTabelaPreco = val.Equals("S", StringComparison.OrdinalIgnoreCase);
+                else if (key.Equals("MultiplasInstancias",      StringComparison.OrdinalIgnoreCase))
+                    prefs.MultiplasInstancias = val.Equals("S", StringComparison.OrdinalIgnoreCase);
+            }
+        }
+        catch { /* arquivo inacessível — retorna defaults */ }
+
+        return prefs;
+    }
+
+    public async Task AtualizarPreferenciasAsync(string iniPath, IniPreferencias preferencias)
+    {
+        var linhas    = await File.ReadAllLinesAsync(iniPath);
+        var resultado = AplicarPreferencias(linhas, preferencias);
+        await File.WriteAllLinesAsync(iniPath, resultado);
+    }
+
+    private static string[] AplicarPreferencias(string[] linhas, IniPreferencias prefs)
+    {
+        var prefValues = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
+        {
+            ["usuario"]                  = prefs.Usuario,
+            ["PesquisaTotalDosProdutos"] = prefs.PesquisaTotalDosProdutos ? "S" : "N",
+            ["MonitorarTempoSelects"]    = prefs.MonitorarTempoSelects    ? "S" : "N",
+            ["SincronizaTabelaPreco"]    = prefs.SincronizaTabelaPreco    ? "S" : "N",
+            ["MultiplasInstancias"]      = prefs.MultiplasInstancias      ? "S" : "N",
+        };
+
+        var encontrados = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        var resultado   = new List<string>();
+        bool dentroPrefs = false;
+
+        foreach (var linha in linhas)
+        {
+            var t = linha.Trim();
+
+            if (t.StartsWith('['))
+            {
+                if (dentroPrefs)
+                {
+                    foreach (var kv in prefValues)
+                        if (!encontrados.Contains(kv.Key))
+                            resultado.Add($"{kv.Key}={kv.Value}");
+                }
+
+                dentroPrefs = t.Equals("[preferencias]", StringComparison.OrdinalIgnoreCase);
+                resultado.Add(linha);
+                continue;
+            }
+
+            if (dentroPrefs)
+            {
+                var eqIdx = t.IndexOf('=');
+                if (eqIdx > 0)
+                {
+                    var key = t.Substring(0, eqIdx);
+                    if (prefValues.TryGetValue(key, out var newVal))
+                    {
+                        encontrados.Add(key);
+                        resultado.Add($"{key}={newVal}");
+                        continue;
+                    }
+                }
+            }
+
+            resultado.Add(linha);
+        }
+
+        // [preferencias] era a última seção
+        if (dentroPrefs)
+        {
+            foreach (var kv in prefValues)
+                if (!encontrados.Contains(kv.Key))
+                    resultado.Add($"{kv.Key}={kv.Value}");
+        }
+
+        return resultado.ToArray();
     }
 
     private static void TentarDeletar(string path)
