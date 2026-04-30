@@ -15,21 +15,59 @@
         </Grid.ColumnDefinitions>
 
         <!-- Sidebar -->
-        <ListBox Grid.Column="0"
-                 Background="{StaticResource SidebarBackground}"
-                 ItemsSource="{Binding Abas}"
-                 SelectedItem="{Binding AbaAtiva}">
-            <ListBox.ItemTemplate>
-                <DataTemplate>
-                    <StackPanel Orientation="Horizontal" Margin="4,0">
-                        <TextBlock Text="{Binding Icone}" Margin="0,0,8,0"
-                                   Foreground="{StaticResource TextSecondary}"/>
-                        <TextBlock Text="{Binding Rotulo}"
-                                   Foreground="{StaticResource TextPrimary}"/>
-                    </StackPanel>
-                </DataTemplate>
-            </ListBox.ItemTemplate>
-        </ListBox>
+        <DockPanel Grid.Column="0" Background="{StaticResource SidebarBackground}">
+
+            <!-- Banner de atualização (fixo na base) -->
+            <Border DockPanel.Dock="Bottom"
+                    BorderBrush="{StaticResource PanelBorder}"
+                    BorderThickness="0,1,0,0"
+                    Padding="10,8"
+                    Visibility="{Binding TemUpdate, Converter={StaticResource BoolToVisibility}}">
+                <StackPanel>
+                    <TextBlock Margin="0,0,0,6" FontSize="11">
+                        <Run Text="⬆ v" Foreground="{StaticResource StatusSuccess}"/>
+                        <Run Text="{Binding UpdateDisponivel.Versao, FallbackValue=''}"
+                             Foreground="{StaticResource StatusSuccess}"/>
+                        <Run Text=" disponível" Foreground="{StaticResource TextSecondary}"/>
+                    </TextBlock>
+                    <ProgressBar Value="{Binding ProgressoUpdate}"
+                                 Maximum="100"
+                                 Height="4"
+                                 Margin="0,0,0,6"
+                                 Background="{StaticResource InputBackground}"
+                                 Foreground="{StaticResource StatusSuccess}"
+                                 BorderThickness="0"
+                                 Visibility="{Binding Atualizando, Converter={StaticResource BoolToVisibility}}"/>
+                    <Button Content="Atualizar"
+                            Command="{Binding AtualizarCommand}"
+                            Style="{StaticResource ButtonPrimary}"
+                            FontSize="11"
+                            Padding="8,4"
+                            Visibility="{Binding Atualizando, Converter={StaticResource InverseBoolToVisibility}}"/>
+                    <TextBlock Text="Atualizando..."
+                               FontSize="11"
+                               Foreground="{StaticResource TextSecondary}"
+                               HorizontalAlignment="Center"
+                               Visibility="{Binding Atualizando, Converter={StaticResource BoolToVisibility}}"/>
+                </StackPanel>
+            </Border>
+
+            <!-- Itens de navegação -->
+            <ListBox Background="Transparent"
+                     ItemsSource="{Binding Abas}"
+                     SelectedItem="{Binding AbaAtiva}">
+                <ListBox.ItemTemplate>
+                    <DataTemplate>
+                        <StackPanel Orientation="Horizontal" Margin="4,0">
+                            <TextBlock Text="{Binding Icone}" Margin="0,0,8,0"
+                                       Foreground="{StaticResource TextSecondary}"/>
+                            <TextBlock Text="{Binding Rotulo}"
+                                       Foreground="{StaticResource TextPrimary}"/>
+                        </StackPanel>
+                    </DataTemplate>
+                </ListBox.ItemTemplate>
+            </ListBox>
+        </DockPanel>
 
         <!-- Workspace -->
         <ContentControl Grid.Column="1"
