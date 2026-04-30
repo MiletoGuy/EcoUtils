@@ -34,6 +34,7 @@ public class MainViewModel : ViewModelBase
             OnPropertyChanged(nameof(SemAtualizacao));
             OnPropertyChanged(nameof(TemAtualizacao));
             OnPropertyChanged(nameof(EstaAtualizando));
+            (AtualizarCommand as AsyncRelayCommand)?.RaiseCanExecuteChanged();
         }
     }
 

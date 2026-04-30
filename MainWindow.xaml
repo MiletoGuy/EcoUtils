@@ -37,88 +37,107 @@
 
             <!-- Ícone de status de atualização (topo direito) -->
             <Grid HorizontalAlignment="Right" VerticalAlignment="Top"
-                  Margin="0,10,14,0" Width="22" Height="22">
+                  Margin="0,8,10,0" Width="28" Height="28">
 
-                <!-- Verificando: spinner giratório -->
-                <Ellipse Width="16" Height="16"
-                         Stroke="{StaticResource TextSecondary}"
-                         StrokeThickness="2"
-                         StrokeDashArray="6 19"
-                         ToolTip="Buscando atualizações..."
-                         Visibility="{Binding EstaVerificando, Converter={StaticResource BoolToVisibility}}">
-                    <Ellipse.RenderTransformOrigin>0.5,0.5</Ellipse.RenderTransformOrigin>
-                    <Ellipse.RenderTransform>
-                        <RotateTransform/>
-                    </Ellipse.RenderTransform>
-                    <Ellipse.Style>
-                        <Style TargetType="Ellipse">
+                <!-- Verificando: spinner giratório cinza -->
+                <Border CornerRadius="4" Cursor="Hand"
+                        ToolTip="Buscando atualizações..."
+                        Visibility="{Binding EstaVerificando, Converter={StaticResource BoolToVisibility}}">
+                    <Border.Style>
+                        <Style TargetType="Border">
+                            <Setter Property="Background" Value="Transparent"/>
                             <Style.Triggers>
-                                <DataTrigger Binding="{Binding EstaVerificando}" Value="True">
-                                    <DataTrigger.EnterActions>
-                                        <BeginStoryboard>
-                                            <Storyboard RepeatBehavior="Forever">
-                                                <DoubleAnimation
-                                                    Storyboard.TargetProperty="(UIElement.RenderTransform).(RotateTransform.Angle)"
-                                                    From="0" To="360" Duration="0:0:1"/>
-                                            </Storyboard>
-                                        </BeginStoryboard>
-                                    </DataTrigger.EnterActions>
-                                </DataTrigger>
+                                <Trigger Property="IsMouseOver" Value="True">
+                                    <Setter Property="Background" Value="{StaticResource ButtonSecondaryHover}"/>
+                                </Trigger>
                             </Style.Triggers>
                         </Style>
-                    </Ellipse.Style>
-                </Ellipse>
+                    </Border.Style>
+                    <Ellipse Width="16" Height="16"
+                             Stroke="{StaticResource TextSecondary}"
+                             StrokeThickness="2"
+                             StrokeDashArray="6 19"
+                             HorizontalAlignment="Center" VerticalAlignment="Center">
+                        <Ellipse.RenderTransformOrigin>0.5,0.5</Ellipse.RenderTransformOrigin>
+                        <Ellipse.RenderTransform><RotateTransform/></Ellipse.RenderTransform>
+                        <Ellipse.Triggers>
+                            <EventTrigger RoutedEvent="Loaded">
+                                <BeginStoryboard>
+                                    <Storyboard RepeatBehavior="Forever">
+                                        <DoubleAnimation
+                                            Storyboard.TargetProperty="(UIElement.RenderTransform).(RotateTransform.Angle)"
+                                            From="0" To="360" Duration="0:0:1"/>
+                                    </Storyboard>
+                                </BeginStoryboard>
+                            </EventTrigger>
+                        </Ellipse.Triggers>
+                    </Ellipse>
+                </Border>
 
                 <!-- Sem atualização: checkmark -->
-                <TextBlock Text="✓"
-                           FontSize="14" FontWeight="Bold"
-                           HorizontalAlignment="Center" VerticalAlignment="Center"
-                           Foreground="{StaticResource StatusSuccess}"
-                           ToolTip="Não há novas atualizações"
-                           Visibility="{Binding SemAtualizacao, Converter={StaticResource BoolToVisibility}}"/>
+                <Border CornerRadius="4" Cursor="Hand"
+                        ToolTip="Não há novas atualizações"
+                        Visibility="{Binding SemAtualizacao, Converter={StaticResource BoolToVisibility}}">
+                    <Border.Style>
+                        <Style TargetType="Border">
+                            <Setter Property="Background" Value="Transparent"/>
+                            <Style.Triggers>
+                                <Trigger Property="IsMouseOver" Value="True">
+                                    <Setter Property="Background" Value="{StaticResource ButtonSecondaryHover}"/>
+                                </Trigger>
+                            </Style.Triggers>
+                        </Style>
+                    </Border.Style>
+                    <TextBlock Text="✓" FontSize="14" FontWeight="Bold"
+                               HorizontalAlignment="Center" VerticalAlignment="Center"
+                               Foreground="{StaticResource StatusSuccess}"/>
+                </Border>
 
                 <!-- Atualização disponível: botão de download -->
                 <Button Command="{Binding AtualizarCommand}"
                         Style="{StaticResource ButtonIcon}"
                         ToolTip="Atualizar agora"
-                        Width="22" Height="22"
-                        Padding="2"
+                        Width="28" Height="28" Padding="2"
                         Visibility="{Binding TemAtualizacao, Converter={StaticResource BoolToVisibility}}">
-                    <TextBlock Text="⬇"
-                               FontSize="13"
+                    <TextBlock Text="⤓" FontSize="17"
                                Foreground="{StaticResource ButtonPrimaryBackground}"
                                HorizontalAlignment="Center" VerticalAlignment="Center"/>
                 </Button>
 
                 <!-- Atualizando: spinner azul -->
-                <Ellipse Width="16" Height="16"
-                         Stroke="{StaticResource ButtonPrimaryBackground}"
-                         StrokeThickness="2"
-                         StrokeDashArray="6 19"
-                         ToolTip="Baixando atualização..."
-                         Visibility="{Binding EstaAtualizando, Converter={StaticResource BoolToVisibility}}">
-                    <Ellipse.RenderTransformOrigin>0.5,0.5</Ellipse.RenderTransformOrigin>
-                    <Ellipse.RenderTransform>
-                        <RotateTransform/>
-                    </Ellipse.RenderTransform>
-                    <Ellipse.Style>
-                        <Style TargetType="Ellipse">
+                <Border CornerRadius="4" Cursor="Hand"
+                        ToolTip="Baixando atualização..."
+                        Visibility="{Binding EstaAtualizando, Converter={StaticResource BoolToVisibility}}">
+                    <Border.Style>
+                        <Style TargetType="Border">
+                            <Setter Property="Background" Value="Transparent"/>
                             <Style.Triggers>
-                                <DataTrigger Binding="{Binding EstaAtualizando}" Value="True">
-                                    <DataTrigger.EnterActions>
-                                        <BeginStoryboard>
-                                            <Storyboard RepeatBehavior="Forever">
-                                                <DoubleAnimation
-                                                    Storyboard.TargetProperty="(UIElement.RenderTransform).(RotateTransform.Angle)"
-                                                    From="0" To="360" Duration="0:0:1"/>
-                                            </Storyboard>
-                                        </BeginStoryboard>
-                                    </DataTrigger.EnterActions>
-                                </DataTrigger>
+                                <Trigger Property="IsMouseOver" Value="True">
+                                    <Setter Property="Background" Value="{StaticResource ButtonSecondaryHover}"/>
+                                </Trigger>
                             </Style.Triggers>
                         </Style>
-                    </Ellipse.Style>
-                </Ellipse>
+                    </Border.Style>
+                    <Ellipse Width="16" Height="16"
+                             Stroke="{StaticResource ButtonPrimaryBackground}"
+                             StrokeThickness="2"
+                             StrokeDashArray="6 19"
+                             HorizontalAlignment="Center" VerticalAlignment="Center">
+                        <Ellipse.RenderTransformOrigin>0.5,0.5</Ellipse.RenderTransformOrigin>
+                        <Ellipse.RenderTransform><RotateTransform/></Ellipse.RenderTransform>
+                        <Ellipse.Triggers>
+                            <EventTrigger RoutedEvent="Loaded">
+                                <BeginStoryboard>
+                                    <Storyboard RepeatBehavior="Forever">
+                                        <DoubleAnimation
+                                            Storyboard.TargetProperty="(UIElement.RenderTransform).(RotateTransform.Angle)"
+                                            From="0" To="360" Duration="0:0:1"/>
+                                    </Storyboard>
+                                </BeginStoryboard>
+                            </EventTrigger>
+                        </Ellipse.Triggers>
+                    </Ellipse>
+                </Border>
 
             </Grid>
         </Grid>
