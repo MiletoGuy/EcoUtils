@@ -7,8 +7,10 @@ namespace EcoUtils.Infrastructure;
 /// </summary>
 public class EcoSettings
 {
-    public string WindowsDir    { get; set; } = @"C:\ecosis\windows";
-    public string DadosDir      { get; set; } = @"C:\ecosis\dados";
-    public string LogsDir       { get; set; } = @"C:\ecosis\logs";
-    public string EcoServerHost { get; set; } = "127.0.0.1";
+    public string WindowsDir       { get; set; } = @"C:\ecosis\windows";
+    public string DadosDir         { get; set; } = @"C:\ecosis\dados";
+    public string LogsDir          { get; set; } = @"C:\ecosis\logs";
+    public string EcoServerHost    { get; set; } = "127.0.0.1";
+    public string FirebirdUser     { get; set; } = "sysdba";
+    public string FirebirdPassword { get; set; } = "masterkey";
 }

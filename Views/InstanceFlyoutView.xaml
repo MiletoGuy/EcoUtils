@@ -28,10 +28,47 @@
         <TextBlock Text="Banco de Dados"
                    Foreground="{StaticResource TextSecondary}"
                    Margin="0,0,0,4"/>
-        <ComboBox ItemsSource="{Binding Bancos}"
-                  SelectedItem="{Binding BancoSelecionado}"
-                  DisplayMemberPath="NomeCompleto"
-                  Margin="0,0,0,4"/>
+        <Grid Margin="0,0,0,4">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*"/>
+                <ColumnDefinition Width="Auto"/>
+            </Grid.ColumnDefinitions>
+            <ComboBox Grid.Column="0"
+                      ItemsSource="{Binding Bancos}"
+                      SelectedItem="{Binding BancoSelecionado}"
+                      DisplayMemberPath="NomeCompleto"
+                      IsEnabled="{Binding NaoImportando}"/>
+            <Button Grid.Column="1"
+                    Content="+"
+                    Style="{StaticResource ButtonPrimary}"
+                    Command="{Binding AdicionarBancoCommand}"
+                    Width="28"
+                    Height="28"
+                    Padding="0"
+                    Margin="4,0,0,0"
+                    ToolTip="Importar banco de dados"/>
+        </Grid>
+
+        <!-- Progresso de importação -->
+        <StackPanel Visibility="{Binding IsImportandoBanco, Converter={StaticResource BoolToVisibility}}"
+                    Margin="0,0,0,4">
+            <TextBlock Text="{Binding MensagemProgresso}"
+                       FontSize="11"
+                       Foreground="{StaticResource TextSecondary}"
+                       Margin="0,0,0,4"/>
+            <ProgressBar Value="{Binding ProgressoImportacao, Mode=OneWay}"
+                         IsIndeterminate="{Binding IsIndeterminadaImportacao}"
+                         Maximum="100"
+                         Height="4"/>
+        </StackPanel>
+
+        <!-- Erro de importação -->
+        <TextBlock Text="{Binding ErroImportacao}"
+                   Foreground="{StaticResource StatusError}"
+                   FontSize="11"
+                   TextWrapping="Wrap"
+                   Margin="0,0,0,8"
+                   Visibility="{Binding TemErroImportacao, Converter={StaticResource BoolToVisibility}}"/>
 
         <!-- Versão do banco (exibida assim que banco é selecionado) -->
         <TextBlock Text="{Binding StatusBancoVersao}"
@@ -43,10 +80,46 @@
         <TextBlock Text="Executável ECO"
                    Foreground="{StaticResource TextSecondary}"
                    Margin="0,0,0,4"/>
-        <ComboBox ItemsSource="{Binding Executaveis}"
-                  SelectedItem="{Binding ExecutavelSelecionado}"
-                  DisplayMemberPath="NomeCompleto"
-                  Margin="0,0,0,6"/>
+        <Grid Margin="0,0,0,6">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*"/>
+                <ColumnDefinition Width="Auto"/>
+            </Grid.ColumnDefinitions>
+            <ComboBox Grid.Column="0"
+                      ItemsSource="{Binding Executaveis}"
+                      SelectedItem="{Binding ExecutavelSelecionado}"
+                      DisplayMemberPath="NomeCompleto"
+                      IsEnabled="{Binding NaoImportandoExe}"/>
+            <Button Grid.Column="1"
+                    Content="+"
+                    Style="{StaticResource ButtonPrimary}"
+                    Command="{Binding AdicionarExeCommand}"
+                    Width="28"
+                    Height="28"
+                    Padding="0"
+                    Margin="4,0,0,0"
+                    ToolTip="Importar executável ECO"/>
+        </Grid>
+
+        <!-- Progresso de importação de executável -->
+        <StackPanel Visibility="{Binding IsImportandoExe, Converter={StaticResource BoolToVisibility}}"
+                    Margin="0,0,0,4">
+            <TextBlock Text="{Binding MensagemProgressoExe}"
+                       FontSize="11"
+                       Foreground="{StaticResource TextSecondary}"
+                       Margin="0,0,0,4"/>
+            <ProgressBar Value="{Binding ProgressoExe, Mode=OneWay}"
+                         Maximum="100"
+                         Height="4"/>
+        </StackPanel>
+
+        <!-- Erro de importação de executável -->
+        <TextBlock Text="{Binding ErroImportacaoExe}"
+                   Foreground="{StaticResource StatusError}"
+                   FontSize="11"
+                   TextWrapping="Wrap"
+                   Margin="0,0,0,6"
+                   Visibility="{Binding TemErroImportacaoExe, Converter={StaticResource BoolToVisibility}}"/>
 
         <!-- Status eco.ini -->
         <TextBlock Text="{Binding StatusIni}"

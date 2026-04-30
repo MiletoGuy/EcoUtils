@@ -7,18 +7,34 @@
     <ImplicitUsings>enable</ImplicitUsings>
     <UseWPF>true</UseWPF>
     <ApplicationManifest>app.manifest</ApplicationManifest>
-    <Version>0.1.1</Version>
+    <Version>0.2.0</Version>
   </PropertyGroup>
 
   <ItemGroup>
     <PackageReference Include="FirebirdSql.Data.FirebirdClient" Version="10.3.4" />
     <PackageReference Include="Microsoft.Extensions.DependencyInjection" Version="10.0.0" />
+    <PackageReference Include="SharpCompress" Version="0.38.0" />
   </ItemGroup>
 
   <ItemGroup>
     <Content Include="appsettings.json">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Content>
+  </ItemGroup>
+
+  <ItemGroup>
+    <None Include="Tools\gbak.exe">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+      <TargetPath>tools\gbak.exe</TargetPath>
+    </None>
+    <None Include="Tools\gfix.exe">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+      <TargetPath>tools\gfix.exe</TargetPath>
+    </None>
+    <None Include="Tools\fbclient.dll">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+      <TargetPath>tools\fbclient.dll</TargetPath>
+    </None>
   </ItemGroup>
 
 </Project>

@@ -19,6 +19,9 @@ public class ExecutarEcoViewModel : ViewModelBase
     private readonly IDatabaseDiscoveryService  _databaseDiscoveryService;
     private readonly IDatabaseVersionService    _databaseVersionService;
     private readonly IInstanceSetupService      _instanceSetupService;
+    private readonly IDatabaseImportService     _databaseImportService;
+    private readonly IExecutableImportService   _executableImportService;
+    private readonly IRestoreService            _restoreService;
     private readonly ILaunchService            _launchService;
     private readonly IDialogService            _dialogService;
     private readonly ILogService               _log;
@@ -160,6 +163,9 @@ public class ExecutarEcoViewModel : ViewModelBase
         IDatabaseDiscoveryService databaseDiscoveryService,
         IDatabaseVersionService databaseVersionService,
         IInstanceSetupService instanceSetupService,
+        IDatabaseImportService databaseImportService,
+        IExecutableImportService executableImportService,
+        IRestoreService restoreService,
         ILaunchService launchService,
         IDialogService dialogService,
         ILogService log)
@@ -169,6 +175,9 @@ public class ExecutarEcoViewModel : ViewModelBase
         _databaseDiscoveryService = databaseDiscoveryService;
         _databaseVersionService   = databaseVersionService;
         _instanceSetupService     = instanceSetupService;
+        _databaseImportService    = databaseImportService;
+        _executableImportService  = executableImportService;
+        _restoreService           = restoreService;
         _launchService            = launchService;
         _dialogService            = dialogService;
         _log                      = log;
@@ -212,43 +221,69 @@ public class ExecutarEcoViewModel : ViewModelBase
 
     private void AbrirFlyoutNovo()
     {
-        var apelidosExistentes = Instancias.Select(i => i.Apelido).ToList();
-        FlyoutVM = new InstanceFlyoutViewModel(
-            _versionCatalogService,
-            _databaseDiscoveryService,
-            _databaseVersionService,
-            _instanceSetupService,
-            async instancia =>
-            {
-                Instancias.Add(instancia);
-                await _instanceRepository.SalvarAsync(new List<EcoInstance>(Instancias));
-            },
-            () => FlyoutAberto = false,
-            apelidosExistentes);
-        FlyoutAberto = true;
+        try
+        {
+            var apelidosExistentes = Instancias.Select(i => i.Apelido).ToList();
+            FlyoutVM = new InstanceFlyoutViewModel(
+                _versionCatalogService,
+                _databaseDiscoveryService,
+                _databaseVersionService,
+                _instanceSetupService,
+                _databaseImportService,
+                _executableImportService,
+                _restoreService,
+                _dialogService,
+                async instancia =>
+                {
+                    Instancias.Add(instancia);
+                    await _instanceRepository.SalvarAsync(new List<EcoInstance>(Instancias));
+                },
+                () => FlyoutAberto = false,
+                apelidosExistentes);
+            FlyoutAberto = true;
+        }
+        catch (Exception ex)
+        {
+            _log.Error(nameof(AbrirFlyoutNovo), ex);
+            _dialogService.Notificar("Erro ao abrir formulário",
+                $"Não foi possível abrir o formulário de nova instância.\n\n{ex.Message}");
+        }
     }
 
     private void AbrirFlyoutEditar(EcoInstance instancia)
     {
-        var apelidosExistentes = Instancias
-            .Where(i => i.Id != instancia.Id)
-            .Select(i => i.Apelido)
-            .ToList();
-        FlyoutVM = new InstanceFlyoutViewModel(
-            _versionCatalogService,
-            _databaseDiscoveryService,
-            _databaseVersionService,
-            _instanceSetupService,
-            async instanciaEditada =>
-            {
-                var idx = Instancias.IndexOf(instancia);
-                if (idx >= 0) Instancias[idx] = instanciaEditada;
-                await _instanceRepository.SalvarAsync(new List<EcoInstance>(Instancias));
-            },
-            () => FlyoutAberto = false,
-            apelidosExistentes,
-            instancia);
-        FlyoutAberto = true;
+        try
+        {
+            var apelidosExistentes = Instancias
+                .Where(i => i.Id != instancia.Id)
+                .Select(i => i.Apelido)
+                .ToList();
+            FlyoutVM = new InstanceFlyoutViewModel(
+                _versionCatalogService,
+                _databaseDiscoveryService,
+                _databaseVersionService,
+                _instanceSetupService,
+                _databaseImportService,
+                _executableImportService,
+                _restoreService,
+                _dialogService,
+                async instanciaEditada =>
+                {
+                    var idx = Instancias.IndexOf(instancia);
+                    if (idx >= 0) Instancias[idx] = instanciaEditada;
+                    await _instanceRepository.SalvarAsync(new List<EcoInstance>(Instancias));
+                },
+                () => FlyoutAberto = false,
+                apelidosExistentes,
+                instancia);
+            FlyoutAberto = true;
+        }
+        catch (Exception ex)
+        {
+            _log.Error(nameof(AbrirFlyoutEditar), ex);
+            _dialogService.Notificar("Erro ao abrir formulário",
+                $"Não foi possível abrir o formulário de edição.\n\n{ex.Message}");
+        }
     }
 
     private async Task ExcluirInstanciaAsync(EcoInstance instancia)

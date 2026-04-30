@@ -337,7 +337,10 @@
                                 <Button Content="&#x2715;"
                                         Style="{StaticResource ButtonDanger}"
                                         Width="20" Height="20"
+                                        VerticalAlignment="Center"
                                         Padding="0"
+                                        FontSize="9"
+                                        FontWeight="Bold"
                                         Command="{Binding DataContext.ExcluirCommand, RelativeSource={RelativeSource AncestorType=ListBox}}"
                                         CommandParameter="{Binding}"/>
                             </StackPanel>

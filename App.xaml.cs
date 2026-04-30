@@ -17,6 +17,24 @@ public partial class App : Application
     {
         base.OnStartup(e);
 
+        DispatcherUnhandledException += (_, args) =>
+        {
+            args.Handled = true;
+            try
+            {
+                var log = _services?.GetService<ILogService>();
+                log?.Error("DispatcherUnhandledException", args.Exception);
+            }
+            catch { /* log falhou */ }
+
+            MessageBox.Show(
+                $"Ocorreu um erro inesperado:\n\n{args.Exception.Message}\n\n" +
+                $"Tipo: {args.Exception.GetType().Name}",
+                "EcoUtils — Erro inesperado",
+                MessageBoxButton.OK,
+                MessageBoxImage.Error);
+        };
+
         CarregarConfiguracoes();
 
         var sc = new ServiceCollection();
@@ -32,6 +50,9 @@ public partial class App : Application
         sc.AddSingleton<IDatabaseDiscoveryService, DatabaseDiscoveryService>();
         sc.AddSingleton<IDatabaseVersionService,   DatabaseVersionService>();
         sc.AddSingleton<IInstanceSetupService,     InstanceSetupService>();
+        sc.AddSingleton<IDatabaseImportService,    DatabaseImportService>();
+        sc.AddSingleton<IExecutableImportService,  ExecutableImportService>();
+        sc.AddSingleton<IRestoreService,           RestoreService>();
         sc.AddSingleton<ILaunchService,            LaunchService>();
         sc.AddSingleton<IDialogService,            DialogService>();
         sc.AddSingleton<IUpdateService,            UpdateService>();
@@ -75,6 +96,10 @@ public partial class App : Application
                 EcoPathConstants.LogsDir = settings.LogsDir;
             if (!string.IsNullOrWhiteSpace(settings.EcoServerHost))
                 EcoPathConstants.EcoServerHost = settings.EcoServerHost;
+            if (!string.IsNullOrWhiteSpace(settings.FirebirdUser))
+                EcoPathConstants.FirebirdUser = settings.FirebirdUser;
+            if (!string.IsNullOrWhiteSpace(settings.FirebirdPassword))
+                EcoPathConstants.FirebirdPassword = settings.FirebirdPassword;
         }
         catch { /* Configuração ausente ou inválida — usa defaults hardcoded */ }
     }

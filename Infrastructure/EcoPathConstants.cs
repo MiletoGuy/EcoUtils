@@ -10,6 +10,10 @@ public static class EcoPathConstants
     public static string LogsDir       { get; set; } = @"C:\ecosis\logs";
     public static string EcoServerHost { get; set; } = "127.0.0.1";
 
+    // Credenciais Firebird
+    public static string FirebirdUser     { get; set; } = "sysdba";
+    public static string FirebirdPassword { get; set; } = "masterkey";
+
     // Derivados — sempre consistentes com os dirs base
     public static string UtilsDir     => Path.Combine(WindowsDir, "Utils");
     public static string EcoIniPadrao => Path.Combine(WindowsDir, "eco.ini");
@@ -17,4 +21,9 @@ public static class EcoPathConstants
 
     public static string AppDataDir =>
         Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "EcoUtils");
+
+    // Ferramentas bundled (tools\)
+    public static string ToolsDir => Path.Combine(AppContext.BaseDirectory, "tools");
+    public static string GbakPath => Path.Combine(ToolsDir, "gbak.exe");
+    public static string GfixPath => Path.Combine(ToolsDir, "gfix.exe");
 }

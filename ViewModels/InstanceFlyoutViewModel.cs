@@ -15,6 +15,10 @@ public class InstanceFlyoutViewModel : ViewModelBase
     private readonly IDatabaseDiscoveryService    _databaseDiscoveryService;
     private readonly IDatabaseVersionService      _databaseVersionService;
     private readonly IInstanceSetupService        _instanceSetupService;
+    private readonly IDatabaseImportService       _databaseImportService;
+    private readonly IExecutableImportService     _executableImportService;
+    private readonly IRestoreService              _restoreService;
+    private readonly IDialogService               _dialogService;
     private readonly Func<EcoInstance, Task>      _onConfirmado;
     private readonly Action                       _fecharFlyout;
     private readonly EcoInstance?                 _instanciaExistente;
@@ -130,21 +134,120 @@ public class InstanceFlyoutViewModel : ViewModelBase
 
     public bool TemErro => ErroConfirmacao is not null;
 
+    // ── Importação de banco ──────────────────────────────────────
+    private bool _isImportandoBanco;
+    public bool IsImportandoBanco
+    {
+        get => _isImportandoBanco;
+        private set
+        {
+            SetProperty(ref _isImportandoBanco, value);
+            OnPropertyChanged(nameof(NaoImportando));
+            ConfirmarCommand.RaiseCanExecuteChanged();
+        }
+    }
+
+    public bool NaoImportando => !_isImportandoBanco;
+
+    private bool _isIndeterminadaImportacao;
+    public bool IsIndeterminadaImportacao
+    {
+        get => _isIndeterminadaImportacao;
+        private set => SetProperty(ref _isIndeterminadaImportacao, value);
+    }
+
+    private int _progressoImportacao;
+    public int ProgressoImportacao
+    {
+        get => _progressoImportacao;
+        private set => SetProperty(ref _progressoImportacao, value);
+    }
+
+    private string _mensagemProgresso = string.Empty;
+    public string MensagemProgresso
+    {
+        get => _mensagemProgresso;
+        private set => SetProperty(ref _mensagemProgresso, value);
+    }
+
+    private string? _erroImportacao;
+    public string? ErroImportacao
+    {
+        get => _erroImportacao;
+        private set
+        {
+            SetProperty(ref _erroImportacao, value);
+            OnPropertyChanged(nameof(TemErroImportacao));
+        }
+    }
+
+    public bool TemErroImportacao => ErroImportacao is not null;
+
+    // ── Importação de executável ─────────────────────────────────
+    private bool _isImportandoExe;
+    public bool IsImportandoExe
+    {
+        get => _isImportandoExe;
+        private set
+        {
+            SetProperty(ref _isImportandoExe, value);
+            OnPropertyChanged(nameof(NaoImportandoExe));
+            ConfirmarCommand.RaiseCanExecuteChanged();
+        }
+    }
+
+    public bool NaoImportandoExe => !_isImportandoExe;
+
+    private int _progressoExe;
+    public int ProgressoExe
+    {
+        get => _progressoExe;
+        private set => SetProperty(ref _progressoExe, value);
+    }
+
+    private string _mensagemProgressoExe = string.Empty;
+    public string MensagemProgressoExe
+    {
+        get => _mensagemProgressoExe;
+        private set => SetProperty(ref _mensagemProgressoExe, value);
+    }
+
+    private string? _erroImportacaoExe;
+    public string? ErroImportacaoExe
+    {
+        get => _erroImportacaoExe;
+        private set
+        {
+            SetProperty(ref _erroImportacaoExe, value);
+            OnPropertyChanged(nameof(TemErroImportacaoExe));
+        }
+    }
+
+    public bool TemErroImportacaoExe => ErroImportacaoExe is not null;
+
     public bool PodeConfirmar =>
         !string.IsNullOrWhiteSpace(Apelido) &&
         !ApelidoDuplicado                   &&
         ExecutavelSelecionado is not null    &&
         BancoSelecionado is not null         &&
-        EcoIniValido;
+        EcoIniValido                        &&
+        !IsImportandoBanco &&
+        !IsImportandoExe;
 
     public ICommand CancelarCommand  { get; }
-    public AsyncRelayCommand ConfirmarCommand { get; }
+    public AsyncRelayCommand ConfirmarCommand    { get; }
+    public AsyncRelayCommand AdicionarBancoCommand { get; }
+    public AsyncRelayCommand AdicionarExeCommand   { get; }
 
     public InstanceFlyoutViewModel(
         IVersionCatalogService versionCatalogService,
         IDatabaseDiscoveryService databaseDiscoveryService,
         IDatabaseVersionService databaseVersionService,
         IInstanceSetupService instanceSetupService,
+        IDatabaseImportService databaseImportService,
+        IExecutableImportService executableImportService,
+        IRestoreService restoreService,
+        IDialogService dialogService,
         Func<EcoInstance, Task> onConfirmado,
         Action fecharFlyout,
         IReadOnlyCollection<string> apelidosExistentes,
@@ -154,6 +257,10 @@ public class InstanceFlyoutViewModel : ViewModelBase
         _databaseDiscoveryService = databaseDiscoveryService;
         _databaseVersionService   = databaseVersionService;
         _instanceSetupService     = instanceSetupService;
+        _databaseImportService    = databaseImportService;
+        _executableImportService  = executableImportService;
+        _restoreService           = restoreService;
+        _dialogService            = dialogService;
         _onConfirmado             = onConfirmado;
         _fecharFlyout             = fecharFlyout;
         _apelidosExistentes       = apelidosExistentes;
@@ -162,8 +269,10 @@ public class InstanceFlyoutViewModel : ViewModelBase
         if (instanciaExistente is not null)
             _apelido = instanciaExistente.Apelido;
 
-        ConfirmarCommand = new AsyncRelayCommand(async _ => await ConfirmarAsync(), _ => PodeConfirmar);
-        CancelarCommand  = new RelayCommand(_ => _fecharFlyout());
+        ConfirmarCommand      = new AsyncRelayCommand(async _ => await ConfirmarAsync(), _ => PodeConfirmar);
+        CancelarCommand       = new RelayCommand(_ => _fecharFlyout());
+        AdicionarBancoCommand = new AsyncRelayCommand(async _ => await AdicionarBancoAsync(), _ => !IsImportandoBanco && !IsImportandoExe);
+        AdicionarExeCommand   = new AsyncRelayCommand(async _ => await AdicionarExeAsync(),   _ => !IsImportandoBanco && !IsImportandoExe);
 
         _ = CarregarDadosAsync();
     }
@@ -282,6 +391,211 @@ public class InstanceFlyoutViewModel : ViewModelBase
             ? "eco.ini padrão encontrado e válido."
             : "eco.ini padrão inválido: chave 'dados=' não encontrada na seção [windows].";
         EcoIniValido = valido;
+    }
+
+    private async System.Threading.Tasks.Task AdicionarBancoAsync()
+    {
+        ErroImportacao = null;
+
+        string? arquivo = _dialogService.SelecionarArquivo(
+            "Selecionar banco de dados",
+            "Arquivos suportados|*.eco;*.fbk;*.gbk;*.zip;*.rar;*.7z|Todos os arquivos|*.*");
+
+        if (arquivo is null) return;
+
+        IsImportandoBanco   = true;
+        ProgressoImportacao = 0;
+        MensagemProgresso   = "Analisando arquivo...";
+
+        try
+        {
+            var progresso = new Progress<DatabaseImportProgress>(p =>
+            {
+                MensagemProgresso   = p.Mensagem;
+                ProgressoImportacao = p.Percentual;
+            });
+
+            var resultado = await _databaseImportService.ProcessarArquivoAsync(arquivo, progresso);
+
+            if (resultado.Format == DatabaseImportFormat.Invalid)
+            {
+                ErroImportacao = resultado.Erro ?? "Formato do arquivo inválido.";
+                return;
+            }
+
+            if (resultado.Format == DatabaseImportFormat.Backup)
+            {
+                bool confirmar = _dialogService.Confirmar(
+                    "Restauração necessária",
+                    "Será preciso restaurar a base. Deseja restaurar agora?",
+                    "Restaurar");
+
+                if (!confirmar) return;
+
+                string nomeBackup = Path.GetFileNameWithoutExtension(resultado.ArquivoPath!);
+                string? apelidoBkp = _dialogService.SolicitarTexto(
+                    "Nomear banco de dados",
+                    "Escolha um apelido para o banco restaurado (nome do arquivo .eco de destino):",
+                    nomeBackup);
+
+                if (apelidoBkp is null) return;
+
+                string destinoRestore = System.IO.Path.Combine(
+                    EcoPathConstants.DadosDir, apelidoBkp + ".eco");
+
+                if (System.IO.File.Exists(destinoRestore))
+                {
+                    ErroImportacao = $"Já existe um banco com o nome \"{apelidoBkp}\" em {EcoPathConstants.DadosDir}.";
+                    return;
+                }
+
+                IsIndeterminadaImportacao = true;
+                MensagemProgresso         = "Restaurando base de dados...";
+
+                var progressoRestore = new Progress<DatabaseImportProgress>(p =>
+                    MensagemProgresso = p.Mensagem);
+
+                await _restoreService.RestaurarAsync(
+                    resultado.ArquivoPath!, destinoRestore, progressoRestore);
+
+                var novoBancoRestore = new EcoDatabase
+                {
+                    NomeCompleto = apelidoBkp,
+                    EcoPath      = destinoRestore
+                };
+
+                Bancos.Add(novoBancoRestore);
+                BancoSelecionado = novoBancoRestore;
+                return;
+            }
+
+            // .eco — solicita apelido e move para dados
+            string nomeAtual = Path.GetFileNameWithoutExtension(resultado.ArquivoPath!);
+            string? apelido  = _dialogService.SolicitarTexto(
+                "Nomear banco de dados",
+                "Escolha um apelido para o banco (será usado como nome do arquivo .eco):",
+                nomeAtual);
+
+            if (apelido is null) return;
+
+            MensagemProgresso   = "Movendo banco para a pasta de dados...";
+            ProgressoImportacao = 0;
+
+            string novoCaminho = await _databaseImportService.MoverEcoParaDadosAsync(
+                resultado.ArquivoPath!, apelido);
+
+            var novoBanco = new EcoDatabase
+            {
+                NomeCompleto = apelido,
+                EcoPath      = novoCaminho
+            };
+
+            Bancos.Add(novoBanco);
+            BancoSelecionado = novoBanco;
+        }
+        catch (Exception ex)
+        {
+            ErroImportacao = ex.Message;
+        }
+        finally
+        {
+            IsImportandoBanco         = false;
+            IsIndeterminadaImportacao = false;
+            MensagemProgresso         = string.Empty;
+            ProgressoImportacao       = 0;
+        }
+    }
+
+    private async System.Threading.Tasks.Task AdicionarExeAsync()
+    {
+        ErroImportacaoExe = null;
+
+        string? arquivo = _dialogService.SelecionarArquivo(
+            "Selecionar executável ECO",
+            "Todos os arquivos|*.*|Pacotes compactados|*.zip;*.rar;*.7z|Executável ECO|eco.exe;*.exe");
+
+        if (arquivo is null) return;
+
+        IsImportandoExe   = true;
+        ProgressoExe      = 0;
+        MensagemProgressoExe = "Analisando arquivo...";
+
+        try
+        {
+            var progresso = new Progress<DatabaseImportProgress>(p =>
+            {
+                MensagemProgressoExe = p.Mensagem;
+                if (p.Percentual >= 0) ProgressoExe = p.Percentual;
+            });
+
+            var resultado = await _executableImportService.ProcessarArquivoAsync(arquivo, progresso);
+
+            if (!resultado.Sucesso)
+            {
+                ErroImportacaoExe = resultado.Erro ?? "Erro ao processar o arquivo.";
+                return;
+            }
+
+            var versaoBuild = _dialogService.SolicitarVersaoBuild();
+            if (versaoBuild is null) return;
+
+            var nomeExe    = $"Eco_{versaoBuild.Value.Versao}_{versaoBuild.Value.Build}.exe";
+            var destinoExe = System.IO.Path.Combine(EcoPathConstants.UtilsDir, nomeExe);
+
+            bool substituir = false;
+            if (System.IO.File.Exists(destinoExe))
+            {
+                bool confirmar = _dialogService.Confirmar(
+                    "Executável já existe",
+                    $"Já existe um executável \"{nomeExe}\" na pasta Utils. Deseja substituí-lo?",
+                    "Substituir");
+
+                if (!confirmar) return;
+                substituir = true;
+            }
+
+            MensagemProgressoExe = "Instalando executável...";
+            ProgressoExe         = 0;
+
+            var novoExe = await _executableImportService.InstalarExecutavelAsync(
+                resultado.ArquivoPath!,
+                versaoBuild.Value.Versao,
+                versaoBuild.Value.Build,
+                substituir);
+
+            if (substituir)
+            {
+                var idx = -1;
+                for (int i = 0; i < Executaveis.Count; i++)
+                {
+                    if (string.Equals(Executaveis[i].ExePath, destinoExe, StringComparison.OrdinalIgnoreCase))
+                    {
+                        idx = i;
+                        break;
+                    }
+                }
+                if (idx >= 0)
+                    Executaveis[idx] = novoExe;
+                else
+                    Executaveis.Add(novoExe);
+            }
+            else
+            {
+                Executaveis.Add(novoExe);
+            }
+
+            ExecutavelSelecionado = novoExe;
+        }
+        catch (Exception ex)
+        {
+            ErroImportacaoExe = ex.Message;
+        }
+        finally
+        {
+            IsImportandoExe      = false;
+            MensagemProgressoExe = string.Empty;
+            ProgressoExe         = 0;
+        }
     }
 
     private async System.Threading.Tasks.Task ConfirmarAsync()
