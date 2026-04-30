@@ -7,9 +7,12 @@ using EcoUtils.Services.Interfaces;
 
 namespace EcoUtils.ViewModels;
 
+public enum EstadoUpdate { Verificando, SemAtualizacao, AtualizacaoDisponivel, Atualizando }
+
 public class MainViewModel : ViewModelBase
 {
     private readonly IUpdateService _updateService;
+    private UpdateInfo? _updateDisponivel;
 
     public ObservableCollection<NavItem> Abas { get; }
 
@@ -20,32 +23,24 @@ public class MainViewModel : ViewModelBase
         set => SetProperty(ref _abaAtiva, value);
     }
 
-    private UpdateInfo? _updateDisponivel;
-    public UpdateInfo? UpdateDisponivel
+    private EstadoUpdate _estado = EstadoUpdate.Verificando;
+    private EstadoUpdate Estado
     {
-        get => _updateDisponivel;
-        private set
+        get => _estado;
+        set
         {
-            SetProperty(ref _updateDisponivel, value);
-            OnPropertyChanged(nameof(TemUpdate));
+            _estado = value;
+            OnPropertyChanged(nameof(EstaVerificando));
+            OnPropertyChanged(nameof(SemAtualizacao));
+            OnPropertyChanged(nameof(TemAtualizacao));
+            OnPropertyChanged(nameof(EstaAtualizando));
         }
     }
 
-    public bool TemUpdate => _updateDisponivel is not null;
-
-    private bool _atualizando;
-    public bool Atualizando
-    {
-        get => _atualizando;
-        private set => SetProperty(ref _atualizando, value);
-    }
-
-    private double _progressoUpdate;
-    public double ProgressoUpdate
-    {
-        get => _progressoUpdate;
-        private set => SetProperty(ref _progressoUpdate, value);
-    }
+    public bool EstaVerificando  => _estado == EstadoUpdate.Verificando;
+    public bool SemAtualizacao   => _estado == EstadoUpdate.SemAtualizacao;
+    public bool TemAtualizacao   => _estado == EstadoUpdate.AtualizacaoDisponivel;
+    public bool EstaAtualizando  => _estado == EstadoUpdate.Atualizando;
 
     public ICommand AtualizarCommand { get; }
 
@@ -65,24 +60,26 @@ public class MainViewModel : ViewModelBase
 
         AbaAtiva = Abas[0];
 
-        AtualizarCommand = new AsyncRelayCommand(_ => ExecutarAtualizacaoAsync());
+        AtualizarCommand = new AsyncRelayCommand(
+            _ => ExecutarAtualizacaoAsync(),
+            _ => TemAtualizacao);
 
         _ = VerificarAtualizacaoAsync();
     }
 
     private async Task VerificarAtualizacaoAsync()
     {
-        UpdateDisponivel = await _updateService.VerificarAtualizacaoAsync();
+        Estado = EstadoUpdate.Verificando;
+        _updateDisponivel = await _updateService.VerificarAtualizacaoAsync();
+        Estado = _updateDisponivel is not null
+            ? EstadoUpdate.AtualizacaoDisponivel
+            : EstadoUpdate.SemAtualizacao;
     }
 
     private async Task ExecutarAtualizacaoAsync()
     {
         if (_updateDisponivel is null) return;
-
-        Atualizando   = true;
-        ProgressoUpdate = 0;
-
-        var progresso = new Progress<double>(p => ProgressoUpdate = p * 100);
-        await _updateService.AtualizarAsync(_updateDisponivel, progresso);
+        Estado = EstadoUpdate.Atualizando;
+        await _updateService.AtualizarAsync(_updateDisponivel);
     }
 }

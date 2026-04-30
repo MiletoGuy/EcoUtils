@@ -15,62 +15,112 @@
         </Grid.ColumnDefinitions>
 
         <!-- Sidebar -->
-        <DockPanel Grid.Column="0" Background="{StaticResource SidebarBackground}">
-
-            <!-- Banner de atualização (fixo na base) -->
-            <Border DockPanel.Dock="Bottom"
-                    BorderBrush="{StaticResource PanelBorder}"
-                    BorderThickness="0,1,0,0"
-                    Padding="10,8"
-                    Visibility="{Binding TemUpdate, Converter={StaticResource BoolToVisibility}}">
-                <StackPanel>
-                    <TextBlock Margin="0,0,0,6" FontSize="11">
-                        <Run Text="⬆ v" Foreground="{StaticResource StatusSuccess}"/>
-                        <Run Text="{Binding UpdateDisponivel.Versao, FallbackValue=''}"
-                             Foreground="{StaticResource StatusSuccess}"/>
-                        <Run Text=" disponível" Foreground="{StaticResource TextSecondary}"/>
-                    </TextBlock>
-                    <ProgressBar Value="{Binding ProgressoUpdate}"
-                                 Maximum="100"
-                                 Height="4"
-                                 Margin="0,0,0,6"
-                                 Background="{StaticResource InputBackground}"
-                                 Foreground="{StaticResource StatusSuccess}"
-                                 BorderThickness="0"
-                                 Visibility="{Binding Atualizando, Converter={StaticResource BoolToVisibility}}"/>
-                    <Button Content="Atualizar"
-                            Command="{Binding AtualizarCommand}"
-                            Style="{StaticResource ButtonPrimary}"
-                            FontSize="11"
-                            Padding="8,4"
-                            Visibility="{Binding Atualizando, Converter={StaticResource InverseBoolToVisibility}}"/>
-                    <TextBlock Text="Atualizando..."
-                               FontSize="11"
-                               Foreground="{StaticResource TextSecondary}"
-                               HorizontalAlignment="Center"
-                               Visibility="{Binding Atualizando, Converter={StaticResource BoolToVisibility}}"/>
-                </StackPanel>
-            </Border>
-
-            <!-- Itens de navegação -->
-            <ListBox Background="Transparent"
-                     ItemsSource="{Binding Abas}"
-                     SelectedItem="{Binding AbaAtiva}">
-                <ListBox.ItemTemplate>
-                    <DataTemplate>
-                        <StackPanel Orientation="Horizontal" Margin="4,0">
-                            <TextBlock Text="{Binding Icone}" Margin="0,0,8,0"
-                                       Foreground="{StaticResource TextSecondary}"/>
-                            <TextBlock Text="{Binding Rotulo}"
-                                       Foreground="{StaticResource TextPrimary}"/>
-                        </StackPanel>
-                    </DataTemplate>
-                </ListBox.ItemTemplate>
-            </ListBox>
-        </DockPanel>
+        <ListBox Grid.Column="0"
+                 Background="{StaticResource SidebarBackground}"
+                 ItemsSource="{Binding Abas}"
+                 SelectedItem="{Binding AbaAtiva}">
+            <ListBox.ItemTemplate>
+                <DataTemplate>
+                    <StackPanel Orientation="Horizontal" Margin="4,0">
+                        <TextBlock Text="{Binding Icone}" Margin="0,0,8,0"
+                                   Foreground="{StaticResource TextSecondary}"/>
+                        <TextBlock Text="{Binding Rotulo}"
+                                   Foreground="{StaticResource TextPrimary}"/>
+                    </StackPanel>
+                </DataTemplate>
+            </ListBox.ItemTemplate>
+        </ListBox>
 
         <!-- Workspace -->
-        <ContentControl Grid.Column="1"
-                        Content="{Binding AbaAtiva.ViewModel}"/>
+        <Grid Grid.Column="1">
+            <ContentControl Content="{Binding AbaAtiva.ViewModel}"/>
+
+            <!-- Ícone de status de atualização (topo direito) -->
+            <Grid HorizontalAlignment="Right" VerticalAlignment="Top"
+                  Margin="0,10,14,0" Width="22" Height="22">
+
+                <!-- Verificando: spinner giratório -->
+                <Ellipse Width="16" Height="16"
+                         Stroke="{StaticResource TextSecondary}"
+                         StrokeThickness="2"
+                         StrokeDashArray="6 19"
+                         ToolTip="Buscando atualizações..."
+                         Visibility="{Binding EstaVerificando, Converter={StaticResource BoolToVisibility}}">
+                    <Ellipse.RenderTransformOrigin>0.5,0.5</Ellipse.RenderTransformOrigin>
+                    <Ellipse.RenderTransform>
+                        <RotateTransform/>
+                    </Ellipse.RenderTransform>
+                    <Ellipse.Style>
+                        <Style TargetType="Ellipse">
+                            <Style.Triggers>
+                                <DataTrigger Binding="{Binding EstaVerificando}" Value="True">
+                                    <DataTrigger.EnterActions>
+                                        <BeginStoryboard>
+                                            <Storyboard RepeatBehavior="Forever">
+                                                <DoubleAnimation
+                                                    Storyboard.TargetProperty="(UIElement.RenderTransform).(RotateTransform.Angle)"
+                                                    From="0" To="360" Duration="0:0:1"/>
+                                            </Storyboard>
+                                        </BeginStoryboard>
+                                    </DataTrigger.EnterActions>
+                                </DataTrigger>
+                            </Style.Triggers>
+                        </Style>
+                    </Ellipse.Style>
+                </Ellipse>
+
+                <!-- Sem atualização: checkmark -->
+                <TextBlock Text="✓"
+                           FontSize="14" FontWeight="Bold"
+                           HorizontalAlignment="Center" VerticalAlignment="Center"
+                           Foreground="{StaticResource StatusSuccess}"
+                           ToolTip="Não há novas atualizações"
+                           Visibility="{Binding SemAtualizacao, Converter={StaticResource BoolToVisibility}}"/>
+
+                <!-- Atualização disponível: botão de download -->
+                <Button Command="{Binding AtualizarCommand}"
+                        Style="{StaticResource ButtonIcon}"
+                        ToolTip="Atualizar agora"
+                        Width="22" Height="22"
+                        Padding="2"
+                        Visibility="{Binding TemAtualizacao, Converter={StaticResource BoolToVisibility}}">
+                    <TextBlock Text="⬇"
+                               FontSize="13"
+                               Foreground="{StaticResource ButtonPrimaryBackground}"
+                               HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                </Button>
+
+                <!-- Atualizando: spinner azul -->
+                <Ellipse Width="16" Height="16"
+                         Stroke="{StaticResource ButtonPrimaryBackground}"
+                         StrokeThickness="2"
+                         StrokeDashArray="6 19"
+                         ToolTip="Baixando atualização..."
+                         Visibility="{Binding EstaAtualizando, Converter={StaticResource BoolToVisibility}}">
+                    <Ellipse.RenderTransformOrigin>0.5,0.5</Ellipse.RenderTransformOrigin>
+                    <Ellipse.RenderTransform>
+                        <RotateTransform/>
+                    </Ellipse.RenderTransform>
+                    <Ellipse.Style>
+                        <Style TargetType="Ellipse">
+                            <Style.Triggers>
+                                <DataTrigger Binding="{Binding EstaAtualizando}" Value="True">
+                                    <DataTrigger.EnterActions>
+                                        <BeginStoryboard>
+                                            <Storyboard RepeatBehavior="Forever">
+                                                <DoubleAnimation
+                                                    Storyboard.TargetProperty="(UIElement.RenderTransform).(RotateTransform.Angle)"
+                                                    From="0" To="360" Duration="0:0:1"/>
+                                            </Storyboard>
+                                        </BeginStoryboard>
+                                    </DataTrigger.EnterActions>
+                                </DataTrigger>
+                            </Style.Triggers>
+                        </Style>
+                    </Ellipse.Style>
+                </Ellipse>
+
+            </Grid>
+        </Grid>
     </Grid>
 </Window>

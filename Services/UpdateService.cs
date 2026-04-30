@@ -16,7 +16,8 @@ public class UpdateService : IUpdateService
 
     private static readonly HttpClient _http = new()
     {
-        DefaultRequestHeaders = { { "User-Agent", "EcoUtils-Updater" } }
+        DefaultRequestHeaders = { { "User-Agent", "EcoUtils-Updater" } },
+        Timeout = TimeSpan.FromSeconds(10)
     };
 
     public async Task<UpdateInfo?> VerificarAtualizacaoAsync()
@@ -47,7 +48,8 @@ public class UpdateService : IUpdateService
     public async Task AtualizarAsync(UpdateInfo info, IProgress<double>? progress = null, CancellationToken ct = default)
     {
         var tempExe    = Path.Combine(Path.GetTempPath(), "EcoUtils-update.exe");
-        var currentExe = Process.GetCurrentProcess().MainModule!.FileName;
+        var currentExe = Process.GetCurrentProcess().MainModule?.FileName
+            ?? System.Reflection.Assembly.GetExecutingAssembly().Location;
 
         // Download com progresso
         using var response = await _http
