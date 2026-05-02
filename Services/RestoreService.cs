@@ -45,20 +45,29 @@ public class RestoreService : IRestoreService
 
         process.Start();
 
-        // Lê stdout e stderr concorrentemente, repassando cada linha como progresso
-        var stdoutTask = LerSaidaAsync(process.StandardOutput, progresso, ct);
-        var stderrTask = LerSaidaAsync(process.StandardError,  progresso, ct);
+        // Registra o kill direto no token — mais confiável do que capturar a exceção
+        // do WaitForExitAsync, que pode não propagar em alguns cenários.
+        // Com -SE service_mgr o fbserver.exe é quem segura os arquivos; matar o gbak
+        // derruba a conexão e o serviço libera os handles após detectar o RST.
+        using var killRegistration = ct.Register(() =>
+        {
+            try { if (!process.HasExited) process.Kill(entireProcessTree: true); } catch { }
+        });
 
-        try
+        // Lê stdout e stderr concorrentemente — sem ct, pois o processo será morto via
+        // killRegistration e as streams fecharão naturalmente.
+        var stdoutTask = LerSaidaAsync(process.StandardOutput, progresso, CancellationToken.None);
+        var stderrTask = LerSaidaAsync(process.StandardError,  progresso, CancellationToken.None);
+
+        await process.WaitForExitAsync(CancellationToken.None);
+        await Task.WhenAll(stdoutTask, stderrTask);
+
+        if (ct.IsCancellationRequested)
         {
-            await process.WaitForExitAsync(ct);
-            await Task.WhenAll(stdoutTask, stderrTask);
-        }
-        catch (OperationCanceledException)
-        {
-            try { process.Kill(entireProcessTree: true); } catch { /* best-effort */ }
-            try { if (File.Exists(destinoEco)) File.Delete(destinoEco); } catch { }
-            throw;
+            // Aguarda o serviço Firebird detectar a desconexão e liberar os arquivos,
+            // tentando deletar o .eco parcial com retentativas espaçadas.
+            await DeletarComRetentativaAsync(destinoEco);
+            ct.ThrowIfCancellationRequested();
         }
 
         if (process.ExitCode != 0)
@@ -88,6 +97,25 @@ public class RestoreService : IRestoreService
                 "Verifique se as credenciais do Firebird estão corretas e se o serviço está ativo." +
                 detalhe);
         }
+    }
+
+    private static async Task DeletarComRetentativaAsync(string path, int tentativas = 8, int delayMs = 1000)
+    {
+        for (int i = 0; i < tentativas; i++)
+        {
+            try
+            {
+                if (File.Exists(path)) File.Delete(path);
+                return; // sucesso
+            }
+            catch (IOException)
+            {
+                // Arquivo ainda bloqueado pelo serviço Firebird — aguarda e tenta de novo
+                if (i < tentativas - 1)
+                    await Task.Delay(delayMs);
+            }
+        }
+        // Esgotou tentativas — deixa o arquivo; será detectado no próximo carregamento
     }
 
     private static async Task<string?> LerSaidaAsync(

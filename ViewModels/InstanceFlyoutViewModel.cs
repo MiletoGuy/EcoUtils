@@ -17,7 +17,7 @@ public class InstanceFlyoutViewModel : ViewModelBase
     private readonly IInstanceSetupService        _instanceSetupService;
     private readonly IDatabaseImportService       _databaseImportService;
     private readonly IExecutableImportService     _executableImportService;
-    private readonly IRestoreService              _restoreService;
+    private readonly IRestoreJobService           _restoreJobService;
     private readonly IDialogService               _dialogService;
     private readonly Func<EcoInstance, Task>      _onConfirmado;
     private readonly Action                       _fecharFlyout;
@@ -78,6 +78,7 @@ public class InstanceFlyoutViewModel : ViewModelBase
                 _apelidoAutoPreenchido = true;
                 _autoFillingApelido    = false;
             }
+            BaseEmRestauracao = value is not null && _restoreJobService.EstaRestaurando(value.EcoPath);
             _ = AtualizarStatusBancoAsync();
             ConfirmarCommand.RaiseCanExecuteChanged();
         }
@@ -283,20 +284,33 @@ public class InstanceFlyoutViewModel : ViewModelBase
         MultiplasInstancias      = MultiplasInstancias,
     };
 
+    // ── Aviso de restauração ativa ────────────────────────────────────
+    private bool _baseEmRestauracao;
+    public bool BaseEmRestauracao
+    {
+        get => _baseEmRestauracao;
+        private set
+        {
+            if (!SetProperty(ref _baseEmRestauracao, value)) return;
+            ConfirmarCommand.RaiseCanExecuteChanged();
+        }
+    }
+
     public bool PodeConfirmar =>
         !string.IsNullOrWhiteSpace(Apelido) &&
         !ApelidoDuplicado                   &&
         ExecutavelSelecionado is not null    &&
         BancoSelecionado is not null         &&
         EcoIniValido                        &&
-        !IsImportandoBanco &&
+        !IsImportandoBanco                  &&
         !IsImportandoExe;
 
-    public ICommand CancelarCommand  { get; }
-    public AsyncRelayCommand ConfirmarCommand    { get; }
-    public AsyncRelayCommand AdicionarBancoCommand { get; }
-    public AsyncRelayCommand AdicionarExeCommand   { get; }
-    public ICommand ToggleIniExpandedCommand { get; }
+    public ICommand CancelarCommand                    { get; }
+    public AsyncRelayCommand ConfirmarCommand          { get; }
+    public AsyncRelayCommand AdicionarBancoCommand     { get; }
+    public AsyncRelayCommand AdicionarExeCommand       { get; }
+    public ICommand ToggleIniExpandedCommand           { get; }
+    public ICommand CancelarRestauracaoFlyoutCommand   { get; }
 
     public InstanceFlyoutViewModel(
         IVersionCatalogService versionCatalogService,
@@ -305,7 +319,7 @@ public class InstanceFlyoutViewModel : ViewModelBase
         IInstanceSetupService instanceSetupService,
         IDatabaseImportService databaseImportService,
         IExecutableImportService executableImportService,
-        IRestoreService restoreService,
+        IRestoreJobService restoreJobService,
         IDialogService dialogService,
         Func<EcoInstance, Task> onConfirmado,
         Action fecharFlyout,
@@ -318,7 +332,7 @@ public class InstanceFlyoutViewModel : ViewModelBase
         _instanceSetupService     = instanceSetupService;
         _databaseImportService    = databaseImportService;
         _executableImportService  = executableImportService;
-        _restoreService           = restoreService;
+        _restoreJobService        = restoreJobService;
         _dialogService            = dialogService;
         _onConfirmado             = onConfirmado;
         _fecharFlyout             = fecharFlyout;
@@ -328,11 +342,21 @@ public class InstanceFlyoutViewModel : ViewModelBase
         if (instanciaExistente is not null)
             _apelido = instanciaExistente.Apelido;
 
-        ConfirmarCommand      = new AsyncRelayCommand(async _ => await ConfirmarAsync(), _ => PodeConfirmar);
-        CancelarCommand       = new RelayCommand(_ => _fecharFlyout());
-        AdicionarBancoCommand = new AsyncRelayCommand(async _ => await AdicionarBancoAsync(), _ => !IsImportandoBanco && !IsImportandoExe);
-        AdicionarExeCommand   = new AsyncRelayCommand(async _ => await AdicionarExeAsync(),   _ => !IsImportandoBanco && !IsImportandoExe);
-        ToggleIniExpandedCommand = new RelayCommand(_ => IniExpanded = !IniExpanded);
+        ConfirmarCommand                  = new AsyncRelayCommand(async _ => await ConfirmarAsync(), _ => PodeConfirmar);
+        CancelarCommand                   = new RelayCommand(_ => _fecharFlyout());
+        AdicionarBancoCommand             = new AsyncRelayCommand(async _ => await AdicionarBancoAsync(), _ => !IsImportandoBanco && !IsImportandoExe);
+        AdicionarExeCommand               = new AsyncRelayCommand(async _ => await AdicionarExeAsync(),   _ => !IsImportandoBanco && !IsImportandoExe);
+        ToggleIniExpandedCommand          = new RelayCommand(_ => IniExpanded = !IniExpanded);
+        CancelarRestauracaoFlyoutCommand  = new RelayCommand(_ =>
+        {
+            if (BancoSelecionado is null) return;
+            bool confirmar = _dialogService.Confirmar(
+                "Cancelar restauração",
+                "Cancelar a restauração irá interromper o processo e excluir o arquivo parcialmente criado. Deseja continuar?",
+                "Cancelar restauração");
+            if (!confirmar) return;
+            _restoreJobService.Cancelar(BancoSelecionado.EcoPath);
+        });
 
         _ = CarregarDadosAsync();
     }
@@ -351,6 +375,24 @@ public class InstanceFlyoutViewModel : ViewModelBase
             {
                 ExecutavelSelecionado = Executaveis.FirstOrDefault(e => e.ExePath == _instanciaExistente.ExecutavelFontePath);
                 BancoSelecionado      = Bancos.FirstOrDefault(b => b.EcoPath == _instanciaExistente.BasePath);
+
+                // Se o banco não foi encontrado no disco, pode estar sendo restaurado (arquivo ainda não existe)
+                if (BancoSelecionado is null && !string.IsNullOrEmpty(_instanciaExistente.BasePath))
+                {
+                    var job = _restoreJobService.ObterPorDestino(_instanciaExistente.BasePath);
+                    if (job is not null && job.Status == RestoreJobStatus.Restaurando)
+                    {
+                        var bancoRestaurando = new EcoDatabase
+                        {
+                            NomeCompleto = job.Apelido,
+                            EcoPath      = job.DestinoEco
+                        };
+                        Bancos.Add(bancoRestaurando);
+                        // Preservar o apelido salvo na instância, não sobrescrever com o nome do banco
+                        _apelidoAutoPreenchido = false;
+                        BancoSelecionado       = bancoRestaurando;
+                    }
+                }
 
                 if (File.Exists(_instanciaExistente.IniPath))
                 {
@@ -381,6 +423,14 @@ public class InstanceFlyoutViewModel : ViewModelBase
 
         StatusBancoVersao = "Consultando versão...";
         _versaoBancoRaw   = null;
+
+        if (BaseEmRestauracao)
+        {
+            StatusBancoVersao = "Aguardando conclusão da restauração...";
+            _versaoBancoRaw   = null;
+            AtualizarCompatibilidade();
+            return;
+        }
 
         var versaoBancoRaw = await _databaseVersionService.ConsultarVersaoAsync(BancoSelecionado.EcoPath);
         _versaoBancoRaw = versaoBancoRaw;
@@ -515,18 +565,27 @@ public class InstanceFlyoutViewModel : ViewModelBase
 
                 if (System.IO.File.Exists(destinoRestore))
                 {
-                    ErroImportacao = $"Já existe um banco com o nome \"{apelidoBkp}\" em {EcoPathConstants.DadosDir}.";
-                    return;
+                    bool substituir = _dialogService.Confirmar(
+                        "Banco já existe",
+                        $"Já existe um banco com o nome \"{apelidoBkp}\" na pasta de dados. Deseja substituí-lo?",
+                        "Substituir");
+
+                    if (!substituir) return;
+
+                    try
+                    {
+                        System.IO.File.Delete(destinoRestore);
+                    }
+                    catch (Exception ex)
+                    {
+                        ErroImportacao = $"Não foi possível remover o banco existente: {ex.Message}";
+                        return;
+                    }
                 }
 
-                IsIndeterminadaImportacao = true;
-                MensagemProgresso         = "Restaurando base de dados...";
+                _restoreJobService.Iniciar(resultado.ArquivoPath!, destinoRestore, apelidoBkp);
 
-                var progressoRestore = new Progress<DatabaseImportProgress>(p =>
-                    MensagemProgresso = p.Mensagem);
-
-                await _restoreService.RestaurarAsync(
-                    resultado.ArquivoPath!, destinoRestore, progressoRestore);
+                MensagemProgresso = $"Restauração de \"{apelidoBkp}\" iniciada em segundo plano.";
 
                 var novoBancoRestore = new EcoDatabase
                 {
@@ -720,6 +779,10 @@ public class InstanceFlyoutViewModel : ViewModelBase
             };
 
             await _onConfirmado(instancia);
+
+            if (_restoreJobService.EstaRestaurando(instancia.BasePath))
+                instancia.StatusRestauracao = RestoreJobStatus.Restaurando;
+
             _fecharFlyout();
         }
         catch (Exception ex)

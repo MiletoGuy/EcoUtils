@@ -1,6 +1,7 @@
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.ComponentModel;
+using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
 using System.Windows;
@@ -21,7 +22,7 @@ public class ExecutarEcoViewModel : ViewModelBase
     private readonly IInstanceSetupService      _instanceSetupService;
     private readonly IDatabaseImportService     _databaseImportService;
     private readonly IExecutableImportService   _executableImportService;
-    private readonly IRestoreService            _restoreService;
+    private readonly IRestoreJobService        _restoreJobService;
     private readonly ILaunchService            _launchService;
     private readonly IDialogService            _dialogService;
     private readonly ILogService               _log;
@@ -154,8 +155,9 @@ public class ExecutarEcoViewModel : ViewModelBase
     public ICommand EditarCommand             { get; }
     public ICommand ExcluirCommand            { get; }
     public ICommand ExecutarCommand           { get; }
-    public ICommand OrdenarCommand            { get; }
-    public ICommand ToggleConfigColunasCommand { get; }
+    public ICommand OrdenarCommand              { get; }
+    public ICommand ToggleConfigColunasCommand  { get; }
+    public ICommand CancelarRestauracaoCommand  { get; }
 
     public ExecutarEcoViewModel(
         IInstanceRepository instanceRepository,
@@ -165,7 +167,7 @@ public class ExecutarEcoViewModel : ViewModelBase
         IInstanceSetupService instanceSetupService,
         IDatabaseImportService databaseImportService,
         IExecutableImportService executableImportService,
-        IRestoreService restoreService,
+        IRestoreJobService restoreJobService,
         ILaunchService launchService,
         IDialogService dialogService,
         ILogService log)
@@ -177,7 +179,7 @@ public class ExecutarEcoViewModel : ViewModelBase
         _instanceSetupService     = instanceSetupService;
         _databaseImportService    = databaseImportService;
         _executableImportService  = executableImportService;
-        _restoreService           = restoreService;
+        _restoreJobService        = restoreJobService;
         _launchService            = launchService;
         _dialogService            = dialogService;
         _log                      = log;
@@ -198,7 +200,10 @@ public class ExecutarEcoViewModel : ViewModelBase
             async inst => await IniciarEcoAsync((EcoInstance)inst!),
             onError: ex => _log.Error(nameof(IniciarEcoAsync), ex));
         OrdenarCommand             = new RelayCommand(col => AplicarOrdenacaoPorColuna((string)col!));
-        ToggleConfigColunasCommand = new RelayCommand(_ => ConfigColunasAberto = !ConfigColunasAberto);
+        ToggleConfigColunasCommand    = new RelayCommand(_ => ConfigColunasAberto = !ConfigColunasAberto);
+        CancelarRestauracaoCommand     = new RelayCommand(inst => _restoreJobService.Cancelar(((EcoInstance)inst!).BasePath));
+
+        _restoreJobService.JobFinalizado += OnJobFinalizado;
 
         _ = CarregarInstanciasAsync();
     }
@@ -209,7 +214,20 @@ public class ExecutarEcoViewModel : ViewModelBase
         {
             var lista = await _instanceRepository.CarregarAsync();
             foreach (var inst in lista)
+            {
                 Instancias.Add(inst);
+
+                var job = _restoreJobService.ObterPorDestino(inst.BasePath);
+                if (job != null)
+                {
+                    VincularJobAInstancia(inst, job);
+                }
+                else if (!string.IsNullOrEmpty(inst.BasePath) && !File.Exists(inst.BasePath))
+                {
+                    inst.StatusRestauracao = RestoreJobStatus.Falhou;
+                    inst.ErroRestauracao   = "Arquivo de base não encontrado. A restauração pode ter sido interrompida.";
+                }
+            }
         }
         catch (Exception ex)
         {
@@ -231,11 +249,13 @@ public class ExecutarEcoViewModel : ViewModelBase
                 _instanceSetupService,
                 _databaseImportService,
                 _executableImportService,
-                _restoreService,
+                _restoreJobService,
                 _dialogService,
                 async instancia =>
                 {
                     Instancias.Add(instancia);
+                    var job = _restoreJobService.ObterPorDestino(instancia.BasePath);
+                    if (job != null) VincularJobAInstancia(instancia, job);
                     await _instanceRepository.SalvarAsync(new List<EcoInstance>(Instancias));
                 },
                 () => FlyoutAberto = false,
@@ -265,12 +285,14 @@ public class ExecutarEcoViewModel : ViewModelBase
                 _instanceSetupService,
                 _databaseImportService,
                 _executableImportService,
-                _restoreService,
+                _restoreJobService,
                 _dialogService,
                 async instanciaEditada =>
                 {
                     var idx = Instancias.IndexOf(instancia);
                     if (idx >= 0) Instancias[idx] = instanciaEditada;
+                    var job = _restoreJobService.ObterPorDestino(instanciaEditada.BasePath);
+                    if (job != null) VincularJobAInstancia(instanciaEditada, job);
                     await _instanceRepository.SalvarAsync(new List<EcoInstance>(Instancias));
                 },
                 () => FlyoutAberto = false,
@@ -298,9 +320,45 @@ public class ExecutarEcoViewModel : ViewModelBase
 
     private async Task IniciarEcoAsync(EcoInstance instancia)
     {
+        if (instancia.StatusRestauracao == RestoreJobStatus.Restaurando)
+            return;
+
         var (sucesso, erro) = await _launchService.ExecutarAsync(instancia);
         if (!sucesso)
             _dialogService.Notificar("Erro ao executar", erro ?? "Erro desconhecido.");
+    }
+
+    private void VincularJobAInstancia(EcoInstance inst, RestoreJobEntry job)
+    {
+        inst.StatusRestauracao         = job.Status;
+        inst.UltimaMensagemRestauracao = job.UltimaMensagem;
+        inst.ErroRestauracao           = job.Erro;
+
+        job.PropertyChanged += (_, e) =>
+        {
+            if (e.PropertyName == nameof(RestoreJobEntry.UltimaMensagem))
+                inst.UltimaMensagemRestauracao = job.UltimaMensagem;
+            if (e.PropertyName == nameof(RestoreJobEntry.Status))
+                inst.StatusRestauracao = job.Status;
+            if (e.PropertyName == nameof(RestoreJobEntry.Erro))
+                inst.ErroRestauracao = job.Erro;
+        };
+    }
+
+    private async void OnJobFinalizado(object? sender, RestoreJobEntry job)
+    {
+        var inst = Instancias.FirstOrDefault(i => i.BasePath == job.DestinoEco);
+        if (inst == null) return;
+
+        inst.StatusRestauracao = job.Status;
+        inst.ErroRestauracao   = job.Erro;
+
+        if (job.Status == RestoreJobStatus.Concluido)
+        {
+            await Task.Delay(TimeSpan.FromSeconds(30));
+            inst.StatusRestauracao         = null;
+            inst.UltimaMensagemRestauracao = null;
+        }
     }
 
     private bool FiltrarInstancia(EcoInstance inst)

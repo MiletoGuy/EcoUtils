@@ -81,7 +81,12 @@ public class UpdateService : IUpdateService
             $"""
             @echo off
             timeout /t 2 /nobreak > nul
-            copy /y "{tempExe}" "{currentExe}"
+            :retry
+            copy /y "{tempExe}" "{currentExe}" > nul
+            if errorlevel 1 (
+                timeout /t 1 /nobreak > nul
+                goto retry
+            )
             start "" "{currentExe}"
             del "{tempExe}"
             del "%~f0"
