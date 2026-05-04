@@ -25,15 +25,6 @@
             </Style.Triggers>
         </Style>
 
-        <!-- CheckBox do popup de configuração -->
-        <Style x:Key="CheckBoxConfig" TargetType="CheckBox">
-            <Setter Property="Foreground" Value="{StaticResource TextPrimary}"/>
-            <Setter Property="FontFamily" Value="{StaticResource FontBase}"/>
-            <Setter Property="FontSize"   Value="{StaticResource FontSizeBase}"/>
-            <Setter Property="Cursor"     Value="Hand"/>
-            <Setter Property="Margin"     Value="0,0,0,6"/>
-        </Style>
-
         <!-- Indicador de ordenação: ▲/▼ condicionado a coluna e direção -->
         <Style x:Key="SortIcon" TargetType="TextBlock">
             <Setter Property="Margin"     Value="4,0,0,0"/>
@@ -94,14 +85,12 @@
                                            FontSize="11"
                                            Margin="0,0,0,8"/>
                                 <CheckBox Content="Executável"
-                                          Style="{StaticResource CheckBoxConfig}"
+                                          Margin="0,0,0,6"
                                           IsChecked="{Binding DataContext.MostrarExecutavel, ElementName=Root}"/>
                                 <CheckBox Content="Banco"
-                                          Style="{StaticResource CheckBoxConfig}"
+                                          Margin="0,0,0,6"
                                           IsChecked="{Binding DataContext.MostrarBanco, ElementName=Root}"/>
                                 <CheckBox Content="Versão"
-                                          Style="{StaticResource CheckBoxConfig}"
-                                          Margin="0"
                                           IsChecked="{Binding DataContext.MostrarVersao, ElementName=Root}"/>
                             </StackPanel>
                         </Border>
@@ -305,7 +294,32 @@
                      ItemsSource="{Binding InstanciasView}">
                 <ListBox.ItemTemplate>
                     <DataTemplate>
-                        <Grid Margin="16,4">
+                        <Grid Margin="16,4"
+                              Tag="{Binding DataContext, ElementName=ListaInstancias}">
+                            <Grid.ContextMenu>
+                                <ContextMenu>
+                                    <MenuItem Header="▶  Executar"
+                                              Command="{Binding PlacementTarget.Tag.ExecutarCommand, RelativeSource={RelativeSource AncestorType=ContextMenu}}"
+                                              CommandParameter="{Binding PlacementTarget.DataContext, RelativeSource={RelativeSource AncestorType=ContextMenu}}">
+                                        <MenuItem.Style>
+                                            <Style TargetType="MenuItem" BasedOn="{StaticResource {x:Type MenuItem}}">
+                                                <Style.Triggers>
+                                                    <DataTrigger Binding="{Binding PlacementTarget.DataContext.EstaRestaurando, RelativeSource={RelativeSource AncestorType=ContextMenu}}" Value="True">
+                                                        <Setter Property="IsEnabled" Value="False"/>
+                                                    </DataTrigger>
+                                                </Style.Triggers>
+                                            </Style>
+                                        </MenuItem.Style>
+                                    </MenuItem>
+                                    <MenuItem Header="✎  Editar"
+                                              Command="{Binding PlacementTarget.Tag.EditarCommand, RelativeSource={RelativeSource AncestorType=ContextMenu}}"
+                                              CommandParameter="{Binding PlacementTarget.DataContext, RelativeSource={RelativeSource AncestorType=ContextMenu}}"/>
+                                    <MenuItem Header="✕  Excluir"
+                                              Style="{StaticResource MenuItemDanger}"
+                                              Command="{Binding PlacementTarget.Tag.ExcluirCommand, RelativeSource={RelativeSource AncestorType=ContextMenu}}"
+                                              CommandParameter="{Binding PlacementTarget.DataContext, RelativeSource={RelativeSource AncestorType=ContextMenu}}"/>
+                                </ContextMenu>
+                            </Grid.ContextMenu>
                             <Grid.ColumnDefinitions>
                                 <ColumnDefinition Width="40"/>
                                 <ColumnDefinition Width="{Binding DataContext.ColWidthApelido,    ElementName=Root}"/>

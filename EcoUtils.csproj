@@ -7,7 +7,8 @@
     <ImplicitUsings>enable</ImplicitUsings>
     <UseWPF>true</UseWPF>
     <ApplicationManifest>app.manifest</ApplicationManifest>
-    <Version>0.2.3</Version>
+    <ApplicationIcon>Assets\Utils_icon.ico</ApplicationIcon>
+    <Version>0.2.4</Version>
   </PropertyGroup>
 
   <ItemGroup>
@@ -20,21 +21,19 @@
     <Content Include="appsettings.json">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Content>
+    <Resource Include="Assets\Utils_icon.ico" />
   </ItemGroup>
 
   <ItemGroup>
-    <None Include="Tools\gbak.exe">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-      <TargetPath>tools\gbak.exe</TargetPath>
-    </None>
-    <None Include="Tools\gfix.exe">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-      <TargetPath>tools\gfix.exe</TargetPath>
-    </None>
-    <None Include="Tools\fbclient.dll">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-      <TargetPath>tools\fbclient.dll</TargetPath>
-    </None>
+    <EmbeddedResource Include="Tools\gbak.exe">
+      <LogicalName>EcoUtils.Tools.gbak.exe</LogicalName>
+    </EmbeddedResource>
+    <EmbeddedResource Include="Tools\gfix.exe">
+      <LogicalName>EcoUtils.Tools.gfix.exe</LogicalName>
+    </EmbeddedResource>
+    <EmbeddedResource Include="Tools\fbclient.dll">
+      <LogicalName>EcoUtils.Tools.fbclient.dll</LogicalName>
+    </EmbeddedResource>
   </ItemGroup>
 
 </Project>

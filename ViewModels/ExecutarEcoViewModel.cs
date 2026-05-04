@@ -266,6 +266,12 @@ public class ExecutarEcoViewModel : ViewModelBase
                     Instancias.Add(instancia);
                     var job = _restoreJobService.ObterPorDestino(instancia.BasePath);
                     if (job != null) VincularJobAInstancia(instancia, job);
+
+                    var vBanco = ExtrairVersaoBancoRaw(instancia.VersaoBanco);
+                    var vExe   = ExtrairVersaoExeNome(instancia.ExecutavelNome);
+                    instancia.VersaoIncompativel = vBanco is not null && vExe is not null
+                        && !string.Equals(vBanco, vExe, StringComparison.OrdinalIgnoreCase);
+
                     await _instanceRepository.SalvarAsync(new List<EcoInstance>(Instancias));
                 },
                 () => FlyoutAberto = false,

@@ -36,6 +36,7 @@ public partial class App : Application
         };
 
         CarregarConfiguracoes();
+        EmbeddedToolsExtractor.EnsureExtracted();
 
         var sc = new ServiceCollection();
 

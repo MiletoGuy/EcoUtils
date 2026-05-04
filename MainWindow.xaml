@@ -5,6 +5,7 @@
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         mc:Ignorable="d"
         Title="EcoUtils"
+        Icon="Assets/Utils_icon.ico"
         Width="1024" Height="680"
         MinWidth="800" MinHeight="520"
         >
@@ -100,7 +101,7 @@
                         ToolTip="Atualizar agora"
                         Width="28" Height="28" Padding="2"
                         Visibility="{Binding TemAtualizacao, Converter={StaticResource BoolToVisibility}}">
-                    <TextBlock Text="⤓" FontSize="17"
+                    <TextBlock Text="⭳" FontSize="17"
                                Foreground="{StaticResource ButtonPrimaryBackground}"
                                HorizontalAlignment="Center" VerticalAlignment="Center"/>
                 </Button>

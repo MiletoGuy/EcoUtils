@@ -118,15 +118,43 @@
                    Margin="0,0,0,4"/>
         <Grid Margin="0,0,0,6">
             <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="Auto"/>
                 <ColumnDefinition Width="*"/>
                 <ColumnDefinition Width="Auto"/>
             </Grid.ColumnDefinitions>
-            <ComboBox Grid.Column="0"
-                      ItemsSource="{Binding Executaveis}"
+            <Grid.RowDefinitions>
+                <RowDefinition/>
+                <RowDefinition/>
+            </Grid.RowDefinitions>
+
+            <!-- Labels -->
+            <TextBlock Grid.Row="0" Grid.Column="0"
+                       Text="Versão"
+                       Foreground="{StaticResource TextPrimary}"
+                       VerticalAlignment="Center"
+                       Margin="0,0,8,4"/>
+            <TextBlock Grid.Row="1" Grid.Column="0"
+                       Text="Build"
+                       Foreground="{StaticResource TextPrimary}"
+                       VerticalAlignment="Center"
+                       Margin="0,0,8,0"/>
+
+            <!-- ComboBox de versão -->
+            <ComboBox Grid.Row="0" Grid.Column="1"
+                      ItemsSource="{Binding VersoesSelecionaveis}"
+                      SelectedItem="{Binding VersaoSelecionada}"
+                      IsEnabled="{Binding NaoImportandoExe}"
+                      Margin="0,0,0,4"/>
+
+            <!-- ComboBox de build -->
+            <ComboBox Grid.Row="1" Grid.Column="1"
+                      ItemsSource="{Binding BuildsSelecionaveis}"
                       SelectedItem="{Binding ExecutavelSelecionado}"
-                      DisplayMemberPath="NomeCompleto"
-                      IsEnabled="{Binding NaoImportandoExe}"/>
-            <Button Grid.Column="1"
+                      DisplayMemberPath="NumeroBuild"
+                      IsEnabled="{Binding PodeSelecionarBuild}"/>
+
+            <!-- Botão importar (alinhado ao centro vertical das duas linhas) -->
+            <Button Grid.Row="0" Grid.RowSpan="2" Grid.Column="2"
                     Content="+"
                     Style="{StaticResource ButtonPrimary}"
                     Command="{Binding AdicionarExeCommand}"
@@ -134,6 +162,7 @@
                     Height="28"
                     Padding="0"
                     Margin="4,0,0,0"
+                    VerticalAlignment="Center"
                     ToolTip="Importar executável ECO"/>
         </Grid>
 

@@ -15,3 +15,7 @@
 
 - [Bug corrigido]
 - [Bug corrigido]
+
+
+// [DefaultPrompt] 
+Faça um patchnote para a versão {versao} revisando as alterações atuais. E revise os demais patchnotes para ter uma noção do padrão a ser seguido. tenha em mente que o patchnote deve ser bem resumido pensado para apenas informar o usuário das mudanças e deve conter apenas o que for relevante ao usuário.

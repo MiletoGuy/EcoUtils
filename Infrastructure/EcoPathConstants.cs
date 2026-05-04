@@ -22,8 +22,8 @@ public static class EcoPathConstants
     public static string AppDataDir =>
         Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "EcoUtils");
 
-    // Ferramentas bundled (tools\)
-    public static string ToolsDir => Path.Combine(AppContext.BaseDirectory, "tools");
+    // Ferramentas bundled — extraídas de EmbeddedResource para AppData na inicialização
+    public static string ToolsDir => Path.Combine(AppDataDir, "tools");
     public static string GbakPath => Path.Combine(ToolsDir, "gbak.exe");
     public static string GfixPath => Path.Combine(ToolsDir, "gfix.exe");
 }

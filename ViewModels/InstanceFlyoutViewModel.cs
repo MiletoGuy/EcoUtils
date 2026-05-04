@@ -48,7 +48,42 @@ public class InstanceFlyoutViewModel : ViewModelBase
         !string.IsNullOrWhiteSpace(Apelido) &&
         _apelidosExistentes.Contains(Apelido.Trim(), StringComparer.OrdinalIgnoreCase);
 
-    public ObservableCollection<EcoExecutavel> Executaveis { get; } = new();
+    public ObservableCollection<EcoExecutavel> Executaveis            { get; } = new();
+    public ObservableCollection<string>        VersoesSelecionaveis   { get; } = new();
+    public ObservableCollection<EcoExecutavel> BuildsSelecionaveis    { get; } = new();
+
+    private string? _versaoSelecionada;
+    public string? VersaoSelecionada
+    {
+        get => _versaoSelecionada;
+        set
+        {
+            if (!SetProperty(ref _versaoSelecionada, value)) return;
+            RecalcularBuilds();
+            OnPropertyChanged(nameof(PodeSelecionarBuild));
+        }
+    }
+
+    private void AtualizarVersoesSelecionaveis()
+    {
+        VersoesSelecionaveis.Clear();
+        foreach (var v in Executaveis
+            .Select(e => ExtrairVersaoExe(e.NomeCompleto))
+            .Where(v => v is not null)
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .OrderBy(v => v, StringComparer.OrdinalIgnoreCase))
+            VersoesSelecionaveis.Add(v!);
+        RecalcularBuilds();
+    }
+
+    private void RecalcularBuilds()
+    {
+        BuildsSelecionaveis.Clear();
+        if (_versaoSelecionada is null) return;
+        foreach (var exe in Executaveis.Where(e =>
+            string.Equals(ExtrairVersaoExe(e.NomeCompleto), _versaoSelecionada, StringComparison.OrdinalIgnoreCase)))
+            BuildsSelecionaveis.Add(exe);
+    }
 
     private EcoExecutavel? _executavelSelecionado;
     public EcoExecutavel? ExecutavelSelecionado
@@ -194,11 +229,13 @@ public class InstanceFlyoutViewModel : ViewModelBase
         {
             SetProperty(ref _isImportandoExe, value);
             OnPropertyChanged(nameof(NaoImportandoExe));
+            OnPropertyChanged(nameof(PodeSelecionarBuild));
             ConfirmarCommand.RaiseCanExecuteChanged();
         }
     }
 
-    public bool NaoImportandoExe => !_isImportandoExe;
+    public bool NaoImportandoExe    => !_isImportandoExe;
+    public bool PodeSelecionarBuild  => _versaoSelecionada is not null && !_isImportandoExe;
 
     private int _progressoExe;
     public int ProgressoExe
@@ -366,13 +403,21 @@ public class InstanceFlyoutViewModel : ViewModelBase
                 "Cancelar restauração");
             if (!confirmar) return;
             IsCancellingRestauracao = true;
+            var bancoParaCancelar = BancoSelecionado;
             try
             {
-                await _restoreJobService.CancelarAsync(BancoSelecionado.EcoPath);
+                await _restoreJobService.CancelarAsync(bancoParaCancelar.EcoPath);
                 BaseEmRestauracao = false;
+                if (!File.Exists(bancoParaCancelar.EcoPath))
+                {
+                    Bancos.Remove(bancoParaCancelar);
+                    BancoSelecionado = null;
+                }
             }
             finally { IsCancellingRestauracao = false; }
         });
+
+        Executaveis.CollectionChanged += (_, _) => AtualizarVersoesSelecionaveis();
 
         _ = CarregarDadosAsync();
     }
@@ -389,7 +434,10 @@ public class InstanceFlyoutViewModel : ViewModelBase
 
             if (_instanciaExistente is not null)
             {
-                ExecutavelSelecionado = Executaveis.FirstOrDefault(e => e.ExePath == _instanciaExistente.ExecutavelFontePath);
+                var exeParaSelecionar = Executaveis.FirstOrDefault(e => e.ExePath == _instanciaExistente.ExecutavelFontePath);
+                if (exeParaSelecionar is not null)
+                    VersaoSelecionada = ExtrairVersaoExe(exeParaSelecionar.NomeCompleto);
+                ExecutavelSelecionado = exeParaSelecionar;
                 BancoSelecionado      = Bancos.FirstOrDefault(b => string.Equals(b.EcoPath, _instanciaExistente.BasePath, StringComparison.OrdinalIgnoreCase));
 
                 // Se o banco não foi encontrado no disco, pode estar sendo restaurado (arquivo ainda não existe)
@@ -729,6 +777,7 @@ public class InstanceFlyoutViewModel : ViewModelBase
                 Executaveis.Add(novoExe);
             }
 
+            VersaoSelecionada     = ExtrairVersaoExe(novoExe.NomeCompleto);
             ExecutavelSelecionado = novoExe;
         }
         catch (Exception ex)
