@@ -526,4 +526,18 @@
         <Setter Property="Foreground" Value="{StaticResource ButtonDangerBackground}"/>
     </Style>
 
+    <Style x:Key="ContextMenuSeparator" TargetType="Separator">
+        <Setter Property="Margin"           Value="0,2"/>
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="Separator">
+                    <Rectangle Height="0.5"
+                               HorizontalAlignment="Stretch"
+                               Fill="{StaticResource PanelBorder}"
+                               Opacity="0.7"/>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+
 </ResourceDictionary>

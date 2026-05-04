@@ -23,6 +23,18 @@ public class MainViewModel : ViewModelBase
         set => SetProperty(ref _abaAtiva, value);
     }
 
+    // ── Configurações overlay ────────────────────────────────────
+    public ConfiguracoesViewModel ConfiguracoesVM { get; }
+
+    private bool _configAberto;
+    public bool ConfigAberto
+    {
+        get => _configAberto;
+        set => SetProperty(ref _configAberto, value);
+    }
+
+    public ICommand AbrirConfigCommand { get; }
+
     private EstadoUpdate _estado = EstadoUpdate.Verificando;
     private EstadoUpdate Estado
     {
@@ -45,9 +57,16 @@ public class MainViewModel : ViewModelBase
 
     public ICommand AtualizarCommand { get; }
 
-    public MainViewModel(ExecutarEcoViewModel executarEcoVm, IUpdateService updateService)
+    public MainViewModel(ExecutarEcoViewModel executarEcoVm, IUserSettingsService userSettingsService, IUpdateService updateService)
     {
         _updateService = updateService;
+
+        ConfiguracoesVM  = new ConfiguracoesViewModel(userSettingsService, () => ConfigAberto = false);
+        AbrirConfigCommand = new RelayCommand(_ =>
+        {
+            ConfiguracoesVM.Resetar();
+            ConfigAberto = true;
+        });
 
         Abas = new ObservableCollection<NavItem>
         {

@@ -58,6 +58,7 @@ public partial class App : Application
         sc.AddSingleton<ILaunchService,            LaunchService>();
         sc.AddSingleton<IDialogService,            DialogService>();
         sc.AddSingleton<IUpdateService,            UpdateService>();
+        sc.AddSingleton<IUserSettingsService,      UserSettingsService>();
 
         // ViewModels
         sc.AddSingleton<ExecutarEcoViewModel>();

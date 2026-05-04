@@ -3,6 +3,7 @@
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        xmlns:views="clr-namespace:EcoUtils.Views"
         mc:Ignorable="d"
         Title="EcoUtils"
         Icon="Assets/Utils_icon.ico"
@@ -17,21 +18,56 @@
         </Grid.ColumnDefinitions>
 
         <!-- Sidebar -->
-        <ListBox Grid.Column="0"
-                 Background="{StaticResource SidebarBackground}"
-                 ItemsSource="{Binding Abas}"
-                 SelectedItem="{Binding AbaAtiva}">
-            <ListBox.ItemTemplate>
-                <DataTemplate>
-                    <StackPanel Orientation="Horizontal" Margin="4,0">
-                        <TextBlock Text="{Binding Icone}" Margin="0,0,8,0"
+        <Grid Grid.Column="0" Background="{StaticResource SidebarBackground}">
+            <Grid.RowDefinitions>
+                <RowDefinition Height="*"/>
+                <RowDefinition Height="Auto"/>
+            </Grid.RowDefinitions>
+
+            <ListBox Grid.Row="0"
+                     Background="Transparent"
+                     ItemsSource="{Binding Abas}"
+                     SelectedItem="{Binding AbaAtiva}">
+                <ListBox.ItemTemplate>
+                    <DataTemplate>
+                        <StackPanel Orientation="Horizontal" Margin="4,0">
+                            <TextBlock Text="{Binding Icone}" Margin="0,0,8,0"
+                                       Foreground="{StaticResource TextSecondary}"/>
+                            <TextBlock Text="{Binding Rotulo}"
+                                       Foreground="{StaticResource TextPrimary}"/>
+                        </StackPanel>
+                    </DataTemplate>
+                </ListBox.ItemTemplate>
+            </ListBox>
+
+            <!-- Botão de configurações na parte inferior -->
+            <Border Grid.Row="1"
+                    BorderBrush="{StaticResource PanelBorder}"
+                    BorderThickness="0,1,0,0">
+                <Button Command="{Binding AbrirConfigCommand}"
+                        HorizontalAlignment="Stretch"
+                        HorizontalContentAlignment="Left"
+                        Padding="16,10"
+                        BorderThickness="0">
+                    <Button.Style>
+                        <Style TargetType="Button" BasedOn="{StaticResource ButtonBase}">
+                            <Setter Property="Background" Value="Transparent"/>
+                            <Style.Triggers>
+                                <Trigger Property="IsMouseOver" Value="True">
+                                    <Setter Property="Background" Value="{StaticResource SidebarItemHover}"/>
+                                </Trigger>
+                            </Style.Triggers>
+                        </Style>
+                    </Button.Style>
+                    <StackPanel Orientation="Horizontal">
+                        <TextBlock Text="⚙" Margin="0,0,8,0"
                                    Foreground="{StaticResource TextSecondary}"/>
-                        <TextBlock Text="{Binding Rotulo}"
+                        <TextBlock Text="Configurações"
                                    Foreground="{StaticResource TextPrimary}"/>
                     </StackPanel>
-                </DataTemplate>
-            </ListBox.ItemTemplate>
-        </ListBox>
+                </Button>
+            </Border>
+        </Grid>
 
         <!-- Workspace -->
         <Grid Grid.Column="1">
@@ -142,6 +178,21 @@
                 </Border>
 
             </Grid>
+        </Grid>
+
+        <!-- Overlay de configurações (cobre toda a janela) -->
+        <Grid Grid.Column="0" Grid.ColumnSpan="2"
+              Visibility="{Binding ConfigAberto, Converter={StaticResource BoolToVisibility}}">
+            <Rectangle Fill="{StaticResource OverlayBackground}"/>
+            <Border HorizontalAlignment="Center"
+                    VerticalAlignment="Center"
+                    Width="460"
+                    Background="{StaticResource PanelBackground}"
+                    BorderBrush="{StaticResource PanelBorder}"
+                    BorderThickness="1"
+                    CornerRadius="4">
+                <views:ConfiguracoesView DataContext="{Binding ConfiguracoesVM}"/>
+            </Border>
         </Grid>
     </Grid>
 </Window>

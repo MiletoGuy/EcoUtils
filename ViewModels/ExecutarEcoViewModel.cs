@@ -9,6 +9,7 @@ using System.Windows;
 using System.Windows.Data;
 using System.Windows.Input;
 using EcoUtils.Commands;
+using EcoUtils.Infrastructure;
 using EcoUtils.Models;
 using EcoUtils.Services.Interfaces;
 
@@ -156,6 +157,7 @@ public class ExecutarEcoViewModel : ViewModelBase
     public ICommand EditarCommand             { get; }
     public ICommand ExcluirCommand            { get; }
     public ICommand ExecutarCommand           { get; }
+    public ICommand CopiarCaminhoBaseCommand  { get; }
     public ICommand OrdenarCommand              { get; }
     public ICommand ToggleConfigColunasCommand  { get; }
     public ICommand CancelarRestauracaoCommand  { get; }
@@ -200,6 +202,7 @@ public class ExecutarEcoViewModel : ViewModelBase
         ExecutarCommand            = new AsyncRelayCommand(
             async inst => await IniciarEcoAsync((EcoInstance)inst!),
             onError: ex => _log.Error(nameof(IniciarEcoAsync), ex));
+        CopiarCaminhoBaseCommand  = new RelayCommand(inst => System.Windows.Clipboard.SetText(((EcoInstance)inst!).BasePath));
         OrdenarCommand             = new RelayCommand(col => AplicarOrdenacaoPorColuna((string)col!));
         ToggleConfigColunasCommand    = new RelayCommand(_ => ConfigColunasAberto = !ConfigColunasAberto);
         CancelarRestauracaoCommand     = new RelayCommand(inst => _restoreJobService.Cancelar(((EcoInstance)inst!).BasePath));

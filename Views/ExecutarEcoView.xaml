@@ -292,11 +292,11 @@
                      BorderThickness="0"
                      HorizontalContentAlignment="Stretch"
                      ItemsSource="{Binding InstanciasView}">
-                <ListBox.ItemTemplate>
-                    <DataTemplate>
-                        <Grid Margin="16,4"
-                              Tag="{Binding DataContext, ElementName=ListaInstancias}">
-                            <Grid.ContextMenu>
+                <ListBox.ItemContainerStyle>
+                    <Style TargetType="ListBoxItem" BasedOn="{StaticResource {x:Type ListBoxItem}}">
+                        <Setter Property="Tag" Value="{Binding DataContext, ElementName=ListaInstancias}"/>
+                        <Setter Property="ContextMenu">
+                            <Setter.Value>
                                 <ContextMenu>
                                     <MenuItem Header="▶  Executar"
                                               Command="{Binding PlacementTarget.Tag.ExecutarCommand, RelativeSource={RelativeSource AncestorType=ContextMenu}}"
@@ -314,12 +314,22 @@
                                     <MenuItem Header="✎  Editar"
                                               Command="{Binding PlacementTarget.Tag.EditarCommand, RelativeSource={RelativeSource AncestorType=ContextMenu}}"
                                               CommandParameter="{Binding PlacementTarget.DataContext, RelativeSource={RelativeSource AncestorType=ContextMenu}}"/>
+                                    <MenuItem Header="⧉  Copiar caminho da base"
+                                              Command="{Binding PlacementTarget.Tag.CopiarCaminhoBaseCommand, RelativeSource={RelativeSource AncestorType=ContextMenu}}"
+                                              CommandParameter="{Binding PlacementTarget.DataContext, RelativeSource={RelativeSource AncestorType=ContextMenu}}"/>
+                                    <Separator Style="{StaticResource ContextMenuSeparator}"/>
                                     <MenuItem Header="✕  Excluir"
                                               Style="{StaticResource MenuItemDanger}"
                                               Command="{Binding PlacementTarget.Tag.ExcluirCommand, RelativeSource={RelativeSource AncestorType=ContextMenu}}"
                                               CommandParameter="{Binding PlacementTarget.DataContext, RelativeSource={RelativeSource AncestorType=ContextMenu}}"/>
                                 </ContextMenu>
-                            </Grid.ContextMenu>
+                            </Setter.Value>
+                        </Setter>
+                    </Style>
+                </ListBox.ItemContainerStyle>
+                <ListBox.ItemTemplate>
+                    <DataTemplate>
+                        <Grid Margin="16,4">
                             <Grid.ColumnDefinitions>
                                 <ColumnDefinition Width="40"/>
                                 <ColumnDefinition Width="{Binding DataContext.ColWidthApelido,    ElementName=Root}"/>
