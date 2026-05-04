@@ -78,22 +78,34 @@
 
         <!-- Aviso: base em restauração ativa -->
         <Border Background="{StaticResource InputBackground}"
-                BorderBrush="{StaticResource StatusWarning}"
+                BorderBrush="{StaticResource InputBorder}"
                 BorderThickness="1"
                 CornerRadius="3"
                 Padding="10,8"
                 Margin="0,0,0,16"
                 Visibility="{Binding BaseEmRestauracao, Converter={StaticResource BoolToVisibility}}">
             <DockPanel>
-                <Button DockPanel.Dock="Right"
-                        Content="Cancelar"
-                        Style="{StaticResource ButtonDanger}"
-                        Padding="8,4"
-                        Margin="8,0,0,0"
-                        VerticalAlignment="Center"
-                        Command="{Binding CancelarRestauracaoFlyoutCommand}"/>
+                <!-- Botão Cancelar Restauração / spinner de carregamento -->
+                <Grid DockPanel.Dock="Right" Margin="8,0,0,0" VerticalAlignment="Center">
+                    <Button Content="Cancelar Restauração"
+                            Style="{StaticResource ButtonDangerOutline}"
+                            Padding="8,4"
+                            Command="{Binding CancelarRestauracaoFlyoutCommand}"
+                            Visibility="{Binding IsCancellingRestauracao, Converter={StaticResource InverseBoolToVisibility}}"/>
+                    <StackPanel Orientation="Horizontal"
+                                Visibility="{Binding IsCancellingRestauracao, Converter={StaticResource BoolToVisibility}}">
+                        <ProgressBar IsIndeterminate="True"
+                                     Width="80" Height="4"
+                                     VerticalAlignment="Center"
+                                     Margin="0,0,6,0"/>
+                        <TextBlock Text="Cancelando..."
+                                   Foreground="{StaticResource TextSecondary}"
+                                   FontSize="11"
+                                   VerticalAlignment="Center"/>
+                    </StackPanel>
+                </Grid>
                 <TextBlock Text="Esta base está sendo restaurada em segundo plano. Você pode continuar configurando a instância."
-                           Foreground="{StaticResource StatusWarning}"
+                           Foreground="{StaticResource TextSecondary}"
                            FontSize="11"
                            TextWrapping="Wrap"
                            VerticalAlignment="Center"/>

@@ -28,7 +28,13 @@ public class EcoInstance : INotifyPropertyChanged
     public string BasePath            { get; set; } = string.Empty;
     public string BaseNome            { get; set; } = string.Empty;
     public string IniPath             { get; set; } = string.Empty;
-    public string VersaoBanco         { get; set; } = string.Empty;
+
+    private string _versaoBanco = string.Empty;
+    public string VersaoBanco
+    {
+        get => _versaoBanco;
+        set => SetProperty(ref _versaoBanco, value);
+    }
 
     // ── Estado de restauração (somente em memória, nunca serializado) ─
     private RestoreJobStatus? _statusRestauracao;
@@ -45,9 +51,17 @@ public class EcoInstance : INotifyPropertyChanged
         }
     }
 
-    [JsonIgnore] public bool EstaRestaurando     => _statusRestauracao == RestoreJobStatus.Restaurando;
-    [JsonIgnore] public bool RestauracaoConcluida => _statusRestauracao == RestoreJobStatus.Concluido;
-    [JsonIgnore] public bool RestauracaoFalhou   => _statusRestauracao == RestoreJobStatus.Falhou;
+    [JsonIgnore] public bool EstaRestaurando      => _statusRestauracao == RestoreJobStatus.Restaurando;
+    [JsonIgnore] public bool RestauracaoConcluida  => _statusRestauracao == RestoreJobStatus.Concluido;
+    [JsonIgnore] public bool RestauracaoFalhou     => _statusRestauracao == RestoreJobStatus.Falhou;
+
+    private bool _versaoIncompativel;
+    [JsonIgnore]
+    public bool VersaoIncompativel
+    {
+        get => _versaoIncompativel;
+        set => SetProperty(ref _versaoIncompativel, value);
+    }
 
     private string? _ultimaMensagemRestauracao;
     [JsonIgnore]

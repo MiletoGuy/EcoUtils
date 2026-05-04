@@ -335,7 +335,7 @@
                                        HorizontalAlignment="Center"
                                        VerticalAlignment="Center"/>
 
-                            <!-- Status de restauração -->
+                            <!-- Status de restauração / incompatibilidade -->
                             <Grid Grid.Column="0"
                                   Width="40"
                                   HorizontalAlignment="Center"
@@ -379,7 +379,7 @@
                                            ToolTip="Restauração concluída"
                                            Visibility="{Binding RestauracaoConcluida, Converter={StaticResource BoolToVisibility}}"/>
 
-                                <!-- Falhou -->
+                                <!-- Falhou (restauração) -->
                                 <TextBlock Text="&#x2715;"
                                            Foreground="{StaticResource StatusError}"
                                            FontSize="12" FontWeight="Bold"
@@ -389,6 +389,31 @@
                                     <TextBlock.ToolTip>
                                         <ToolTip Content="{Binding ErroRestauracao}"/>
                                     </TextBlock.ToolTip>
+                                </TextBlock>
+
+                                <!-- Versão incompatível (somente quando não há status de restauração) -->
+                                <TextBlock Text="&#x26A0;"
+                                           Foreground="{StaticResource StatusWarning}"
+                                           FontSize="13"
+                                           HorizontalAlignment="Center"
+                                           VerticalAlignment="Center"
+                                           ToolTip="Versão do banco incompatível com o executável selecionado.">
+                                    <TextBlock.Style>
+                                        <Style TargetType="TextBlock">
+                                            <Setter Property="Visibility" Value="Collapsed"/>
+                                            <Style.Triggers>
+                                                <MultiDataTrigger>
+                                                    <MultiDataTrigger.Conditions>
+                                                        <Condition Binding="{Binding VersaoIncompativel}" Value="True"/>
+                                                        <Condition Binding="{Binding EstaRestaurando}"    Value="False"/>
+                                                        <Condition Binding="{Binding RestauracaoConcluida}" Value="False"/>
+                                                        <Condition Binding="{Binding RestauracaoFalhou}"  Value="False"/>
+                                                    </MultiDataTrigger.Conditions>
+                                                    <Setter Property="Visibility" Value="Visible"/>
+                                                </MultiDataTrigger>
+                                            </Style.Triggers>
+                                        </Style>
+                                    </TextBlock.Style>
                                 </TextBlock>
                             </Grid>
 

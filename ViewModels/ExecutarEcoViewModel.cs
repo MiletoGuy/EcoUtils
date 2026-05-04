@@ -1,6 +1,7 @@
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.ComponentModel;
+using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
@@ -227,6 +228,14 @@ public class ExecutarEcoViewModel : ViewModelBase
                     inst.StatusRestauracao = RestoreJobStatus.Falhou;
                     inst.ErroRestauracao   = "Arquivo de base não encontrado. A restauração pode ter sido interrompida.";
                 }
+                else if (!string.IsNullOrEmpty(inst.BasePath) && File.Exists(inst.BasePath)
+                         && !string.IsNullOrEmpty(inst.ExecutavelNome))
+                {
+                    var versaoBanco = ExtrairVersaoBancoRaw(inst.VersaoBanco);
+                    var versaoExe   = ExtrairVersaoExeNome(inst.ExecutavelNome);
+                    inst.VersaoIncompativel = versaoBanco is not null && versaoExe is not null
+                        && !string.Equals(versaoBanco, versaoExe, StringComparison.OrdinalIgnoreCase);
+                }
             }
         }
         catch (Exception ex)
@@ -251,6 +260,7 @@ public class ExecutarEcoViewModel : ViewModelBase
                 _executableImportService,
                 _restoreJobService,
                 _dialogService,
+                _log,
                 async instancia =>
                 {
                     Instancias.Add(instancia);
@@ -287,12 +297,20 @@ public class ExecutarEcoViewModel : ViewModelBase
                 _executableImportService,
                 _restoreJobService,
                 _dialogService,
+                _log,
                 async instanciaEditada =>
                 {
                     var idx = Instancias.IndexOf(instancia);
                     if (idx >= 0) Instancias[idx] = instanciaEditada;
                     var job = _restoreJobService.ObterPorDestino(instanciaEditada.BasePath);
                     if (job != null) VincularJobAInstancia(instanciaEditada, job);
+
+                    // Recalcula incompatibilidade com base na versão já armazenada
+                    var vBanco = ExtrairVersaoBancoRaw(instanciaEditada.VersaoBanco);
+                    var vExe   = ExtrairVersaoExeNome(instanciaEditada.ExecutavelNome);
+                    instanciaEditada.VersaoIncompativel = vBanco is not null && vExe is not null
+                        && !string.Equals(vBanco, vExe, StringComparison.OrdinalIgnoreCase);
+
                     await _instanceRepository.SalvarAsync(new List<EcoInstance>(Instancias));
                 },
                 () => FlyoutAberto = false,
@@ -313,19 +331,81 @@ public class ExecutarEcoViewModel : ViewModelBase
         if (!_dialogService.Confirmar("Excluir instância", $"Excluir \"{instancia.Apelido}\"?", "Excluir"))
             return;
 
-        _instanceSetupService.Remover(instancia.ExecutavelPath, instancia.IniPath);
+        _log.Info(nameof(ExcluirInstanciaAsync), $"Excluindo instância \"{instancia.Apelido}\" ({instancia.Id})");
+
+        EncerrarProcessosDoExe(instancia.ExecutavelPath);
+
+        try
+        {
+            _instanceSetupService.Remover(instancia.ExecutavelPath, instancia.IniPath);
+        }
+        catch (UnauthorizedAccessException ex)
+        {
+            _log.Error(nameof(ExcluirInstanciaAsync), ex);
+            _dialogService.Notificar("Não foi possível excluir",
+                "Acesso negado ao tentar excluir os arquivos da instância mesmo após encerrar os processos associados.\n\nVerifique manualmente se algum processo ainda está usando o arquivo.");
+            return;
+        }
+        catch (Exception ex)
+        {
+            _log.Error(nameof(ExcluirInstanciaAsync), ex);
+            _dialogService.Notificar("Não foi possível excluir",
+                $"Erro ao excluir os arquivos da instância:\n\n{ex.Message}");
+            return;
+        }
+
         Instancias.Remove(instancia);
         await _instanceRepository.SalvarAsync(new List<EcoInstance>(Instancias));
+        _log.Info(nameof(ExcluirInstanciaAsync), $"Instância \"{instancia.Apelido}\" removida com sucesso.");
+    }
+
+    private void EncerrarProcessosDoExe(string exePath)
+    {
+        if (string.IsNullOrWhiteSpace(exePath)) return;
+
+        try
+        {
+            foreach (var processo in Process.GetProcesses())
+            {
+                try
+                {
+                    if (string.Equals(processo.MainModule?.FileName, exePath, StringComparison.OrdinalIgnoreCase))
+                    {
+                        _log.Info(nameof(EncerrarProcessosDoExe),
+                            $"Encerrando processo PID={processo.Id} ({processo.ProcessName}) que usa \"{exePath}\"");
+                        processo.Kill(entireProcessTree: true);
+                        processo.WaitForExit(3000);
+                    }
+                }
+                catch { /* processo já encerrou ou sem acesso ao módulo — ignorar */ }
+                finally { processo.Dispose(); }
+            }
+        }
+        catch (Exception ex)
+        {
+            _log.Warn(nameof(EncerrarProcessosDoExe), $"Falha ao enumerar processos: {ex.Message}");
+        }
     }
 
     private async Task IniciarEcoAsync(EcoInstance instancia)
     {
         if (instancia.StatusRestauracao == RestoreJobStatus.Restaurando)
+        {
+            _log.Warn(nameof(IniciarEcoAsync), $"Tentativa de iniciar instância em restauração: {instancia.Apelido}");
             return;
+        }
 
+        _log.Info(nameof(IniciarEcoAsync), $"Iniciando instância \"{instancia.Apelido}\" com exe \"{instancia.ExecutavelNome}\"");
         var (sucesso, erro) = await _launchService.ExecutarAsync(instancia);
         if (!sucesso)
+        {
+            _log.Warn(nameof(IniciarEcoAsync), $"Falha ao iniciar \"{instancia.Apelido}\": {erro}");
             _dialogService.Notificar("Erro ao executar", erro ?? "Erro desconhecido.");
+        }
+        else
+        {
+            _log.Info(nameof(IniciarEcoAsync), $"Instância \"{instancia.Apelido}\" iniciada com sucesso.");
+        }
     }
 
     private void VincularJobAInstancia(EcoInstance inst, RestoreJobEntry job)
@@ -348,17 +428,65 @@ public class ExecutarEcoViewModel : ViewModelBase
     private async void OnJobFinalizado(object? sender, RestoreJobEntry job)
     {
         var inst = Instancias.FirstOrDefault(i => i.BasePath == job.DestinoEco);
-        if (inst == null) return;
+        if (inst == null)
+        {
+            _log.Warn(nameof(OnJobFinalizado), $"Job finalizado para destino sem instância vinculada: {job.DestinoEco}");
+            return;
+        }
 
         inst.StatusRestauracao = job.Status;
         inst.ErroRestauracao   = job.Erro;
 
         if (job.Status == RestoreJobStatus.Concluido)
         {
+            _log.Info(nameof(OnJobFinalizado), $"Restauração concluída para \"{inst.Apelido}\". Consultando versão do banco...");
+            await AtualizarVersaoBancoAsync(inst);
+
             await Task.Delay(TimeSpan.FromSeconds(30));
             inst.StatusRestauracao         = null;
             inst.UltimaMensagemRestauracao = null;
         }
+        else if (job.Status == RestoreJobStatus.Falhou)
+        {
+            _log.Warn(nameof(OnJobFinalizado), $"Restauração falhou para \"{inst.Apelido}\": {job.Erro}");
+        }
+    }
+
+    // "14650000" → "650"  (mesmo algoritmo do flyout)
+    private static string? ExtrairVersaoBancoRaw(string raw)
+    {
+        if (raw.Length > 5 && raw.All(char.IsDigit))
+            return raw.Substring(2, raw.Length - 5);
+        return null;
+    }
+
+    // "Eco_650_10" → "650"
+    private static string? ExtrairVersaoExeNome(string nomeCompleto)
+    {
+        var partes = nomeCompleto.Split('_');
+        return partes.Length >= 2 ? partes[1] : null;
+    }
+
+    private async Task AtualizarVersaoBancoAsync(EcoInstance inst)
+    {
+        var raw = await _databaseVersionService.ConsultarVersaoAsync(inst.BasePath);
+        if (raw is null)
+        {
+            _log.Warn(nameof(AtualizarVersaoBancoAsync), $"Não foi possível obter versão do banco para \"{inst.Apelido}\" ({inst.BasePath})");
+            return;
+        }
+
+        inst.VersaoBanco = raw;
+
+        var versaoBanco = ExtrairVersaoBancoRaw(raw);
+        var versaoExe   = ExtrairVersaoExeNome(inst.ExecutavelNome);
+        inst.VersaoIncompativel = versaoBanco is not null && versaoExe is not null
+            && !string.Equals(versaoBanco, versaoExe, StringComparison.OrdinalIgnoreCase);
+
+        _log.Info(nameof(AtualizarVersaoBancoAsync),
+            $"Versão do banco \"{inst.Apelido}\": raw={raw}, extraída={versaoBanco ?? "n/a"}, exe={versaoExe ?? "n/a"}, incompatível={inst.VersaoIncompativel}");
+
+        await _instanceRepository.SalvarAsync(new List<EcoInstance>(Instancias));
     }
 
     private bool FiltrarInstancia(EcoInstance inst)

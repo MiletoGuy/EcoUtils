@@ -25,6 +25,11 @@ public interface IRestoreJobService
     void Cancelar(string destinoEco);
 
     /// <summary>
+    /// Cancela o job e aguarda sua finalização completa (limpeza de arquivo incluída).
+    /// </summary>
+    Task CancelarAsync(string destinoEco);
+
+    /// <summary>
     /// Disparado no thread da UI quando um job muda para Concluido ou Falhou.
     /// </summary>
     event EventHandler<RestoreJobEntry> JobFinalizado;

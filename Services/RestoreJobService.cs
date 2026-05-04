@@ -69,6 +69,32 @@ public class RestoreJobService : IRestoreJobService
         }
     }
 
+    public Task CancelarAsync(string destinoEco)
+    {
+        RestoreJobEntry? entry;
+        lock (_lock)
+            _jobs.TryGetValue(destinoEco, out entry);
+
+        if (entry is null || entry.Status != RestoreJobStatus.Restaurando)
+            return Task.CompletedTask;
+
+        var tcs = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+
+        void OnJobFinalizado(object? s, RestoreJobEntry e)
+        {
+            if (!e.DestinoEco.Equals(destinoEco, StringComparison.OrdinalIgnoreCase)) return;
+            JobFinalizado -= OnJobFinalizado;
+            tcs.TrySetResult();
+        }
+
+        JobFinalizado += OnJobFinalizado;
+
+        // Cancela após registrar o handler para não perder o evento em raças
+        entry.Cts.Cancel();
+
+        return tcs.Task;
+    }
+
     private async Task ExecutarJobAsync(RestoreJobEntry entry)
     {
         // Progress<T> captura o SynchronizationContext do thread atual (UI),

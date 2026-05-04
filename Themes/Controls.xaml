@@ -114,6 +114,19 @@
         </Style.Triggers>
     </Style>
 
+    <!-- Button — Danger Outline (fundo transparente, borda e texto vermelhos) -->
+    <Style x:Key="ButtonDangerOutline" TargetType="Button" BasedOn="{StaticResource ButtonBase}">
+        <Setter Property="Background"       Value="Transparent"/>
+        <Setter Property="Foreground"       Value="{StaticResource ButtonDangerBackground}"/>
+        <Setter Property="BorderBrush"      Value="{StaticResource ButtonDangerBackground}"/>
+        <Setter Property="BorderThickness"  Value="1"/>
+        <Style.Triggers>
+            <Trigger Property="IsMouseOver" Value="True">
+                <Setter Property="Background" Value="#22c72e2e"/>
+            </Trigger>
+        </Style.Triggers>
+    </Style>
+
     <!-- Button — Ícone (sem texto, quadrado, fundo transparente) -->
     <Style x:Key="ButtonIcon" TargetType="Button" BasedOn="{StaticResource ButtonBase}">
         <Setter Property="Background"   Value="Transparent"/>

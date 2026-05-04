@@ -24,9 +24,12 @@ public class RestoreService : IRestoreService
             Directory.CreateDirectory(destDir);
 
         var args = new StringBuilder();
-        args.Append("-r -v -SE service_mgr ");
+        args.Append("-r -v ");
         args.Append($"\"{arquivoBackup}\" ");
-        args.Append($"\"{destinoEco}\" ");
+        // Prefixo host:caminho — sem -SE service_mgr o gbak usa conexão direta ao fbserver.
+        // Ao matar o gbak a conexão TCP cai e o fbserver aborta imediatamente,
+        // liberando os handles dos arquivos quase que instantaneamente.
+        args.Append($"\"{EcoPathConstants.EcoServerHost}:{destinoEco}\" ");
         args.Append($"-user {EcoPathConstants.FirebirdUser} ");
         args.Append($"-pass {EcoPathConstants.FirebirdPassword}");
 

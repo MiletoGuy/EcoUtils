@@ -8,11 +8,14 @@ public class LogService : ILogService
 {
     private static readonly object _lock = new();
 
-    public void Error(string contexto, Exception ex) =>
-        Append("ERROR", contexto, ex.ToString());
+    public void Info(string contexto, string mensagem) =>
+        Append("INFO", contexto, mensagem);
 
     public void Warn(string contexto, string mensagem) =>
         Append("WARN", contexto, mensagem);
+
+    public void Error(string contexto, Exception ex) =>
+        Append("ERROR", contexto, ex.ToString());
 
     private static void Append(string nivel, string contexto, string detalhe)
     {
