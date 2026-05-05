@@ -29,6 +29,12 @@
   </ItemGroup>
 
   <ItemGroup>
+    <EmbeddedResource Include="Resources\built-in-queries.json">
+      <LogicalName>EcoUtils.Resources.built-in-queries.json</LogicalName>
+    </EmbeddedResource>
+  </ItemGroup>
+
+  <ItemGroup>
     <EmbeddedResource Include="Tools\gbak.exe">
       <LogicalName>EcoUtils.Tools.gbak.exe</LogicalName>
     </EmbeddedResource>

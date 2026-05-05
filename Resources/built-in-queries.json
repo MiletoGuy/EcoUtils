@@ -1,0 +1,94 @@
+[
+  {
+    "id": "sistema-timestamp",
+    "nome": "Timestamp do servidor",
+    "categoria": "Sistema",
+    "descricao": "Retorna a data e hora atual do servidor Firebird. Útil para confirmar que a conexão está ativa e verificar o fuso horário do servidor.",
+    "sql": "SELECT CURRENT_TIMESTAMP AS SERVIDOR_AGORA FROM RDB$DATABASE",
+    "parametros": [],
+    "isBuiltIn": true
+  },
+  {
+    "id": "sistema-versao-eco",
+    "nome": "Versão do ECO",
+    "categoria": "Sistema",
+    "descricao": "Retorna a versão do ECO instalada no banco selecionado.",
+    "sql": "SELECT FIRST 1 VERSAO FROM TGERLICENCA",
+    "parametros": [],
+    "isBuiltIn": true
+  },
+  {
+    "id": "sistema-tabelas",
+    "nome": "Listar tabelas do banco",
+    "categoria": "Sistema",
+    "descricao": "Lista todas as tabelas de usuário do banco de dados (excluindo tabelas de sistema do Firebird).",
+    "sql": "SELECT RDB$RELATION_NAME AS TABELA\nFROM RDB$RELATIONS\nWHERE RDB$SYSTEM_FLAG = 0\n  AND RDB$VIEW_BLR IS NULL\nORDER BY RDB$RELATION_NAME",
+    "parametros": [],
+    "isBuiltIn": true
+  },
+  {
+    "id": "clientes-buscar-por-nome",
+    "nome": "Buscar cliente por nome",
+    "categoria": "Clientes",
+    "descricao": "Busca clientes cujo nome contenha o termo informado. Retorna código, nome, CNPJ/CPF e cidade.",
+    "sql": "SELECT FIRST 200\n  C.CODCLI,\n  C.NOMECLI,\n  C.CGCCLI,\n  C.CIDCLI\nFROM TGERCLI C\nWHERE C.NOMECLI CONTAINING :nome\nORDER BY C.NOMECLI",
+    "parametros": [
+      { "nome": "nome", "tipo": "String", "descricao": "Trecho do nome do cliente (sem % — a busca já usa CONTAINING)" }
+    ],
+    "isBuiltIn": true
+  },
+  {
+    "id": "clientes-buscar-por-cnpj",
+    "nome": "Buscar cliente por CNPJ/CPF",
+    "categoria": "Clientes",
+    "descricao": "Localiza um cliente pelo CNPJ ou CPF (apenas dígitos).",
+    "sql": "SELECT\n  C.CODCLI,\n  C.NOMECLI,\n  C.CGCCLI,\n  C.CIDCLI,\n  C.ESTCLI\nFROM TGERCLI C\nWHERE C.CGCCLI = :cnpj",
+    "parametros": [
+      { "nome": "cnpj", "tipo": "String", "descricao": "CNPJ ou CPF (apenas dígitos, sem pontos ou traços)" }
+    ],
+    "isBuiltIn": true
+  },
+  {
+    "id": "fiscal-buscar-nf-chave",
+    "nome": "Buscar NF por chave de acesso",
+    "categoria": "Fiscal",
+    "descricao": "Retorna os dados principais de uma NF-e pela chave de acesso (44 dígitos).",
+    "sql": "SELECT\n  N.NUMNF,\n  N.SERNF,\n  N.DATNF,\n  N.CODCLI,\n  C.NOMECLI,\n  N.TOTNF,\n  N.STATNF\nFROM TGERNF N\nLEFT JOIN TGERCLI C ON C.CODCLI = N.CODCLI\nWHERE N.CHAVENFE = :chave_nfe",
+    "parametros": [
+      { "nome": "chave_nfe", "tipo": "String", "descricao": "Chave de acesso da NF-e (44 dígitos, sem espaços)" }
+    ],
+    "isBuiltIn": true
+  },
+  {
+    "id": "fiscal-nf-por-numero",
+    "nome": "Buscar NF por número",
+    "categoria": "Fiscal",
+    "descricao": "Retorna nota(s) fiscal(is) pelo número e série informados.",
+    "sql": "SELECT\n  N.NUMNF,\n  N.SERNF,\n  N.DATNF,\n  N.CODCLI,\n  C.NOMECLI,\n  N.TOTNF,\n  N.STATNF,\n  N.CHAVENFE\nFROM TGERNF N\nLEFT JOIN TGERCLI C ON C.CODCLI = N.CODCLI\nWHERE N.NUMNF = :numero\n  AND N.SERNF = :serie\nORDER BY N.DATNF DESC",
+    "parametros": [
+      { "nome": "numero", "tipo": "Int",    "descricao": "Número da nota fiscal" },
+      { "nome": "serie",  "tipo": "String", "descricao": "Série da nota (ex: 1, A, B)" }
+    ],
+    "isBuiltIn": true
+  },
+  {
+    "id": "permissoes-usuario",
+    "nome": "Permissões de um usuário",
+    "categoria": "Permissões",
+    "descricao": "Lista todos os módulos e permissões associados a um usuário do ECO.",
+    "sql": "SELECT\n  U.CODUSU,\n  U.NOMUSU,\n  P.MODULO,\n  P.ACESSO\nFROM TGERUSU U\nINNER JOIN TGERUSUPER P ON P.CODUSU = U.CODUSU\nWHERE U.CODUSU = :codusu\nORDER BY P.MODULO",
+    "parametros": [
+      { "nome": "codusu", "tipo": "String", "descricao": "Código/login do usuário no ECO" }
+    ],
+    "isBuiltIn": true
+  },
+  {
+    "id": "permissoes-listar-usuarios",
+    "nome": "Listar usuários ativos",
+    "categoria": "Permissões",
+    "descricao": "Lista todos os usuários cadastrados e ativos no ECO.",
+    "sql": "SELECT\n  U.CODUSU,\n  U.NOMUSU,\n  U.EMAILUSU,\n  U.ATVUSU\nFROM TGERUSU U\nWHERE U.ATVUSU = 'S'\nORDER BY U.NOMUSU",
+    "parametros": [],
+    "isBuiltIn": true
+  }
+]
