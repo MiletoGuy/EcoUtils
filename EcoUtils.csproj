@@ -12,6 +12,7 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <PackageReference Include="AvalonEdit" Version="6.3.1.120" />
     <PackageReference Include="FirebirdSql.Data.FirebirdClient" Version="10.3.4" />
     <PackageReference Include="Microsoft.Extensions.DependencyInjection" Version="10.0.0" />
     <PackageReference Include="SharpCompress" Version="0.38.0" />
@@ -31,6 +32,9 @@
   <ItemGroup>
     <EmbeddedResource Include="Resources\built-in-queries.json">
       <LogicalName>EcoUtils.Resources.built-in-queries.json</LogicalName>
+    </EmbeddedResource>
+    <EmbeddedResource Include="Resources\sql-dark.xshd">
+      <LogicalName>EcoUtils.Resources.sql-dark.xshd</LogicalName>
     </EmbeddedResource>
   </ItemGroup>
 

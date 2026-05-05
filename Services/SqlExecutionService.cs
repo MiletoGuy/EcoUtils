@@ -65,8 +65,34 @@ public class SqlExecutionService : ISqlExecutionService, IDisposable
         try
         {
             return EhComandoEscrita(sql)
-                ? await ExecutarEscritaAsync(sql, sw)
-                : await ExecutarSelectAsync(sql, limiteLinhas, sw);
+                ? await ExecutarEscritaAsync(sql, sw, null)
+                : await ExecutarSelectAsync(sql, limiteLinhas, sw, null);
+        }
+        catch (Exception ex)
+        {
+            sw.Stop();
+            _log.Error($"{nameof(SqlExecutionService)}.{nameof(ExecutarAsync)}", ex);
+            return SqlExecutionResult.Falha(ex.Message, sw.Elapsed);
+        }
+    }
+
+    public async Task<SqlExecutionResult> ExecutarAsync(
+        string sql,
+        IReadOnlyList<(string nome, object? valor)> parametros,
+        int? limiteLinhas = null)
+    {
+        if (string.IsNullOrWhiteSpace(_bancoAtivo))
+            return SqlExecutionResult.Falha("Nenhum banco de dados selecionado.", TimeSpan.Zero);
+
+        if (string.IsNullOrWhiteSpace(sql))
+            return SqlExecutionResult.Falha("A query está vazia.", TimeSpan.Zero);
+
+        var sw = Stopwatch.StartNew();
+        try
+        {
+            return EhComandoEscrita(sql)
+                ? await ExecutarEscritaAsync(sql, sw, parametros)
+                : await ExecutarSelectAsync(sql, limiteLinhas, sw, parametros);
         }
         catch (Exception ex)
         {
@@ -116,12 +142,17 @@ public class SqlExecutionService : ISqlExecutionService, IDisposable
 
     // ── Helpers internos ─────────────────────────────────────────────────────
 
-    private async Task<SqlExecutionResult> ExecutarSelectAsync(string sql, int? limiteLinhas, Stopwatch sw)
+    private async Task<SqlExecutionResult> ExecutarSelectAsync(
+        string sql,
+        int? limiteLinhas,
+        Stopwatch sw,
+        IReadOnlyList<(string nome, object? valor)>? parametros)
     {
         await using var conn = new FbConnection(CriarConnectionString(_bancoAtivo!));
         await conn.OpenAsync();
 
         await using var cmd = new FbCommand(sql, conn) { CommandTimeout = 60 };
+        AdicionarParametros(cmd, parametros);
         await using var reader = await cmd.ExecuteReaderAsync();
 
         var colunas = Enumerable.Range(0, reader.FieldCount)
@@ -162,7 +193,10 @@ public class SqlExecutionService : ISqlExecutionService, IDisposable
         };
     }
 
-    private async Task<SqlExecutionResult> ExecutarEscritaAsync(string sql, Stopwatch sw)
+    private async Task<SqlExecutionResult> ExecutarEscritaAsync(
+        string sql,
+        Stopwatch sw,
+        IReadOnlyList<(string nome, object? valor)>? parametros)
     {
         // Abre conexão persistente se ainda não houver uma (necessária para manter a transação viva)
         if (_conexaoAtiva is null)
@@ -179,6 +213,7 @@ public class SqlExecutionService : ISqlExecutionService, IDisposable
         }
 
         await using var cmd = new FbCommand(sql, _conexaoAtiva, _transacaoAtiva) { CommandTimeout = 60 };
+        AdicionarParametros(cmd, parametros);
         int linhasAfetadas = await cmd.ExecuteNonQueryAsync();
 
         sw.Stop();
@@ -203,6 +238,18 @@ public class SqlExecutionService : ISqlExecutionService, IDisposable
         }
 
         TransacaoPendenteChanged?.Invoke(this, EventArgs.Empty);
+    }
+
+    /// <summary>
+    /// Adiciona FbParameters nomeados ao comando, se houver.
+    /// </summary>
+    private static void AdicionarParametros(
+        FbCommand cmd,
+        IReadOnlyList<(string nome, object? valor)>? parametros)
+    {
+        if (parametros is null || parametros.Count == 0) return;
+        foreach (var (nome, valor) in parametros)
+            cmd.Parameters.AddWithValue(nome, valor ?? DBNull.Value);
     }
 
     /// <summary>

@@ -35,6 +35,15 @@ public interface ISqlExecutionService
     /// <param name="limiteLinhas">Máximo de linhas a retornar para SELECT. Null = sem limite.</param>
     Task<SqlExecutionResult> ExecutarAsync(string sql, int? limiteLinhas = null);
 
+    /// <summary>
+    /// Executa uma query com parâmetros nomeados (sintaxe :nome_param).
+    /// Os valores são passados como FbParameter via ADO.NET, sem interpolação de string.
+    /// </summary>
+    /// <param name="sql">Texto da query com placeholders :nome_param.</param>
+    /// <param name="parametros">Lista de (nome, valor) convertidos ao tipo correto.</param>
+    /// <param name="limiteLinhas">Máximo de linhas a retornar para SELECT. Null = sem limite.</param>
+    Task<SqlExecutionResult> ExecutarAsync(string sql, IReadOnlyList<(string nome, object? valor)> parametros, int? limiteLinhas = null);
+
     /// <summary>Confirma a transação de escrita ativa.</summary>
     Task CommitAsync();
 

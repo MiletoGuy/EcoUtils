@@ -1,3 +1,4 @@
+using System.Collections.ObjectModel;
 using System.Windows.Input;
 using EcoUtils.Commands;
 using EcoUtils.Models;
@@ -9,6 +10,7 @@ public class SqlDetailViewModel : ViewModelBase
 {
     private readonly ISqlExecutionService _executionService;
     private readonly IUserSettingsService _settingsService;
+    private readonly IDialogService       _dialogService;
 
     // ── Sub-VM ────────────────────────────────────────────────────────────────
 
@@ -26,22 +28,28 @@ public class SqlDetailViewModel : ViewModelBase
             {
                 OnPropertyChanged(nameof(EntradaDefinida));
                 OnPropertyChanged(nameof(PossuiParametros));
-                OnPropertyChanged(nameof(TextoParametros));
+                ReconstruirParametros();
                 ResultadoVM.Limpar();
                 (ExecutarCommand as AsyncRelayCommand)?.RaiseCanExecuteChanged();
+                (EditarCommand   as RelayCommand)?.RaiseCanExecuteChanged();
             }
         }
     }
 
-    public bool   EntradaDefinida  => _entrada is not null;
-    public bool   PossuiParametros => _entrada?.Parametros.Count > 0;
+    public bool EntradaDefinida  => _entrada is not null;
+    public bool PossuiParametros => Parametros.Count > 0;
 
-    public string TextoParametros => _entrada?.Parametros.Count switch
+    // ── Parâmetros ────────────────────────────────────────────────────────────
+
+    public ObservableCollection<SqlParameterInstance> Parametros { get; } = [];
+
+    private void ReconstruirParametros()
     {
-        null or 0 => string.Empty,
-        1         => "1 parâmetro necessário (disponível em breve)",
-        int n     => $"{n} parâmetros necessários (disponíveis em breve)"
-    };
+        Parametros.Clear();
+        if (_entrada is null) return;
+        foreach (var p in _entrada.Parametros)
+            Parametros.Add(new SqlParameterInstance(p));
+    }
 
     // ── Executando ────────────────────────────────────────────────────────────
 
@@ -59,6 +67,7 @@ public class SqlDetailViewModel : ViewModelBase
     // ── Commands ──────────────────────────────────────────────────────────────
 
     public ICommand ExecutarCommand { get; }
+    public ICommand EditarCommand   { get; }
 
     // ── Ctor ──────────────────────────────────────────────────────────────────
 
@@ -66,11 +75,17 @@ public class SqlDetailViewModel : ViewModelBase
         ISqlExecutionService executionService,
         ISqlExportService    exportService,
         IDialogService       dialogService,
-        IUserSettingsService settingsService)
+        IUserSettingsService settingsService,
+        Action<SqlEntry>     onEditar)
     {
         _executionService = executionService;
         _settingsService  = settingsService;
+        _dialogService    = dialogService;
         ResultadoVM       = new SqlResultViewModel(exportService, dialogService);
+
+        EditarCommand = new RelayCommand(
+            _ => onEditar(_entrada!),
+            _ => _entrada is not null);
 
         ExecutarCommand = new AsyncRelayCommand(
             async _ =>
@@ -80,13 +95,33 @@ public class SqlDetailViewModel : ViewModelBase
                 try
                 {
                     var limite = _settingsService.Settings.LimiteLinhasConsulta;
-                    var result = await _executionService.ExecutarAsync(_entrada.CorpoSql, limite);
+
+                    SqlExecutionResult result;
+                    if (Parametros.Count == 0)
+                    {
+                        result = await _executionService.ExecutarAsync(_entrada.CorpoSql, limite);
+                    }
+                    else
+                    {
+                        // Valida e converte todos os parâmetros antes de executar
+                        var valores = new List<(string nome, object? valor)>(Parametros.Count);
+                        foreach (var inst in Parametros)
+                        {
+                            var (ok, erro, valor) = inst.TentarConverter();
+                            if (!ok)
+                            {
+                                _dialogService.Notificar("Parâmetro inválido", erro ?? "Valor inválido.");
+                                return;
+                            }
+                            valores.Add((inst.Definicao.Nome, valor));
+                        }
+                        result = await _executionService.ExecutarAsync(_entrada.CorpoSql, valores, limite);
+                    }
+
                     ResultadoVM.CarregarResultado(result);
                 }
                 finally { Executando = false; }
             },
-            _ => _entrada is not null
-              && _entrada.Parametros.Count == 0
-              && !_executando);
+            _ => _entrada is not null && !_executando);
     }
 }

@@ -1,0 +1,78 @@
+<?xml version="1.0"?>
+<SyntaxDefinition name="SQL-Dark"
+    xmlns="http://icsharpcode.net/sharpdevelop/syntaxdefinition/2008">
+
+  <Color name="Comment"  foreground="#6a9955"/>
+  <Color name="String"   foreground="#ce9178"/>
+  <Color name="Keyword"  foreground="#569cd6" fontWeight="bold"/>
+  <Color name="Function" foreground="#dcdcaa"/>
+  <Color name="Number"   foreground="#b5cea8"/>
+  <Color name="Param"    foreground="#9cdcfe"/>
+
+  <RuleSet ignoreCase="true">
+
+    <!-- Comentários de linha -->
+    <Span color="Comment">
+      <Begin>--</Begin>
+      <End>$</End>
+    </Span>
+
+    <!-- Comentários de bloco -->
+    <Span color="Comment" multiline="true">
+      <Begin>/\*</Begin>
+      <End>\*/</End>
+    </Span>
+
+    <!-- Strings entre aspas simples -->
+    <Span color="String">
+      <Begin>'</Begin>
+      <End>'</End>
+    </Span>
+
+    <!-- Parâmetros Firebird :nome_param -->
+    <Rule color="Param">:\w+</Rule>
+
+    <!-- Números -->
+    <Rule color="Number">\b\d+(\.\d+)?\b</Rule>
+
+    <!-- Palavras-chave SQL -->
+    <Keywords color="Keyword">
+      <Word>SELECT</Word>   <Word>FROM</Word>     <Word>WHERE</Word>
+      <Word>AND</Word>      <Word>OR</Word>       <Word>NOT</Word>
+      <Word>IN</Word>       <Word>IS</Word>       <Word>NULL</Word>
+      <Word>LIKE</Word>     <Word>CONTAINING</Word> <Word>STARTING</Word>
+      <Word>JOIN</Word>     <Word>LEFT</Word>     <Word>RIGHT</Word>
+      <Word>INNER</Word>    <Word>OUTER</Word>    <Word>ON</Word>
+      <Word>AS</Word>       <Word>WITH</Word>     <Word>UNION</Word>
+      <Word>ALL</Word>      <Word>DISTINCT</Word> <Word>EXISTS</Word>
+      <Word>BETWEEN</Word>  <Word>CASE</Word>     <Word>WHEN</Word>
+      <Word>THEN</Word>     <Word>ELSE</Word>     <Word>END</Word>
+      <Word>GROUP</Word>    <Word>BY</Word>       <Word>ORDER</Word>
+      <Word>HAVING</Word>   <Word>FIRST</Word>    <Word>SKIP</Word>
+      <Word>ROWS</Word>     <Word>TOP</Word>
+      <Word>INSERT</Word>   <Word>INTO</Word>     <Word>VALUES</Word>
+      <Word>UPDATE</Word>   <Word>SET</Word>
+      <Word>DELETE</Word>
+      <Word>CREATE</Word>   <Word>ALTER</Word>    <Word>DROP</Word>
+      <Word>TABLE</Word>    <Word>INDEX</Word>    <Word>VIEW</Word>
+      <Word>PROCEDURE</Word> <Word>TRIGGER</Word>
+      <Word>EXECUTE</Word>  <Word>BLOCK</Word>
+    </Keywords>
+
+    <!-- Funções comuns -->
+    <Keywords color="Function">
+      <Word>COUNT</Word>    <Word>SUM</Word>      <Word>AVG</Word>
+      <Word>MIN</Word>      <Word>MAX</Word>
+      <Word>COALESCE</Word> <Word>NULLIF</Word>   <Word>IIF</Word>
+      <Word>TRIM</Word>     <Word>UPPER</Word>    <Word>LOWER</Word>
+      <Word>SUBSTRING</Word> <Word>CHAR_LENGTH</Word>
+      <Word>CAST</Word>     <Word>EXTRACT</Word>
+      <Word>CURRENT_TIMESTAMP</Word>
+      <Word>CURRENT_DATE</Word>
+      <Word>CURRENT_TIME</Word>
+      <Word>CURRENT_USER</Word>
+      <Word>GEN_ID</Word>   <Word>NEXT VALUE FOR</Word>
+    </Keywords>
+
+  </RuleSet>
+</SyntaxDefinition>
