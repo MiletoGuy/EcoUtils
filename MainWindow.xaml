@@ -4,12 +4,19 @@
         xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         xmlns:views="clr-namespace:EcoUtils.Views"
+        xmlns:vm="clr-namespace:EcoUtils.ViewModels"
         mc:Ignorable="d"
         Title="EcoUtils"
         Icon="Assets/Utils_icon.ico"
         Width="1024" Height="680"
         MinWidth="800" MinHeight="520"
         >
+
+    <Window.Resources>
+        <DataTemplate DataType="{x:Type vm:BancoDadosViewModel}">
+            <views:BancoDadosView/>
+        </DataTemplate>
+    </Window.Resources>
 
     <Grid>
         <Grid.ColumnDefinitions>

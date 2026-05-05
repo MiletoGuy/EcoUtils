@@ -61,9 +61,11 @@ public partial class App : Application
         sc.AddSingleton<IUserSettingsService,      UserSettingsService>();
         sc.AddSingleton<ISqlExecutionService,      SqlExecutionService>();
         sc.AddSingleton<ISqlLibraryService,        SqlLibraryService>();
+        sc.AddSingleton<ISqlExportService,         SqlExportService>();
 
         // ViewModels
         sc.AddSingleton<ExecutarEcoViewModel>();
+        sc.AddSingleton<BancoDadosViewModel>();
         sc.AddSingleton<MainViewModel>();
 
         // Shell

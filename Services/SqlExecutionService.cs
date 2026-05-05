@@ -128,6 +128,10 @@ public class SqlExecutionService : ISqlExecutionService, IDisposable
             .Select(i => reader.GetName(i))
             .ToList();
 
+        var tipos = Enumerable.Range(0, reader.FieldCount)
+            .Select(i => reader.GetFieldType(i))
+            .ToList();
+
         var linhas = new List<IReadOnlyList<object?>>();
         bool limiteAtingido = false;
         int limite = limiteLinhas ?? int.MaxValue;
@@ -151,6 +155,7 @@ public class SqlExecutionService : ISqlExecutionService, IDisposable
         {
             Sucesso        = true,
             Colunas        = colunas,
+            TiposColunas   = tipos,
             Linhas         = linhas,
             LimiteAtingido = limiteAtingido,
             TempoExecucao  = sw.Elapsed

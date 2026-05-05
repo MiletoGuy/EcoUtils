@@ -35,6 +35,16 @@ public class DialogService : IDialogService
         return dlg.ShowDialog() == true ? dlg.FileName : null;
     }
 
+    public string? SalvarArquivo(string titulo, string filtro)
+    {
+        var dlg = new SaveFileDialog
+        {
+            Title  = titulo,
+            Filter = filtro
+        };
+        return dlg.ShowDialog() == true ? dlg.FileName : null;
+    }
+
     public string? SolicitarTexto(string titulo, string mensagem, string valorInicial = "")
     {
         var dlg = new TextInputDialog(titulo, mensagem, valorInicial)

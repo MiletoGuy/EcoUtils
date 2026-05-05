@@ -57,7 +57,7 @@ public class MainViewModel : ViewModelBase
 
     public ICommand AtualizarCommand { get; }
 
-    public MainViewModel(ExecutarEcoViewModel executarEcoVm, IUserSettingsService userSettingsService, IUpdateService updateService)
+    public MainViewModel(ExecutarEcoViewModel executarEcoVm, BancoDadosViewModel bancoDadosVm, IUserSettingsService userSettingsService, IUpdateService updateService)
     {
         _updateService = updateService;
 
@@ -75,6 +75,12 @@ public class MainViewModel : ViewModelBase
                 Rotulo    = "Executar ECO",
                 Icone     = "\u25B6",
                 ViewModel = executarEcoVm
+            },
+            new NavItem
+            {
+                Rotulo    = "Banco de Dados",
+                Icone     = "\uD83D\uDDC4",
+                ViewModel = bancoDadosVm
             }
         };
 

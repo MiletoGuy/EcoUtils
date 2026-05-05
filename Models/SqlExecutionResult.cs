@@ -5,6 +5,7 @@ public class SqlExecutionResult
     public bool Sucesso { get; init; }
     public string? Erro { get; init; }
     public IReadOnlyList<string> Colunas { get; init; } = [];
+    public IReadOnlyList<Type> TiposColunas { get; init; } = [];
     public IReadOnlyList<IReadOnlyList<object?>> Linhas { get; init; } = [];
     public bool LimiteAtingido { get; init; }
     public TimeSpan TempoExecucao { get; init; }
