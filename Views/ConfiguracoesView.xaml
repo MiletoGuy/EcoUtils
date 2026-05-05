@@ -1,116 +1,309 @@
 <UserControl x:Class="EcoUtils.Views.ConfiguracoesView"
              xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-             xmlns:converters="clr-namespace:EcoUtils.Converters"
-             Padding="24">
+             xmlns:converters="clr-namespace:EcoUtils.Converters">
     <UserControl.Resources>
         <BooleanToVisibilityConverter x:Key="BoolToVisibility"/>
         <converters:InverseBoolToVisibilityConverter x:Key="InverseBoolToVisibility"/>
+
+        <!-- Estilo para o nav button da sidebar -->
+        <Style x:Key="NavButton" TargetType="Button" BasedOn="{StaticResource ButtonBase}">
+            <Setter Property="HorizontalAlignment"        Value="Stretch"/>
+            <Setter Property="HorizontalContentAlignment" Value="Left"/>
+            <Setter Property="BorderThickness"            Value="0"/>
+            <Setter Property="Padding"                    Value="16,9"/>
+            <Setter Property="Background"                 Value="Transparent"/>
+            <Style.Triggers>
+                <Trigger Property="IsMouseOver" Value="True">
+                    <Setter Property="Background" Value="{StaticResource SidebarItemHover}"/>
+                </Trigger>
+            </Style.Triggers>
+        </Style>
     </UserControl.Resources>
-    <StackPanel>
-        <!-- Título -->
-        <TextBlock Text="Configurações"
-                   Foreground="{StaticResource TextPrimary}"
-                   FontSize="15"
-                   Margin="0,0,0,24"/>
 
-        <!-- ── IBExpert ── -->
-        <TextBlock Text="IBExpert"
-                   Foreground="{StaticResource TextSecondary}"
-                   FontSize="11"
-                   FontWeight="SemiBold"
-                   Margin="0,0,0,10"/>
+    <Grid>
+        <Grid.ColumnDefinitions>
+            <ColumnDefinition Width="160"/>
+            <ColumnDefinition Width="*"/>
+        </Grid.ColumnDefinitions>
 
-        <TextBlock Text="Caminho do executável"
-                   Foreground="{StaticResource TextSecondary}"
-                   Margin="0,0,0,4"/>
-
-        <Grid>
-            <Grid.ColumnDefinitions>
-                <ColumnDefinition Width="*"/>
-                <ColumnDefinition Width="Auto"/>
-            </Grid.ColumnDefinitions>
-            <TextBox Grid.Column="0"
-                     Text="{Binding IbExpertPath, UpdateSourceTrigger=PropertyChanged}"
-                     Margin="0,0,6,0"/>
-            <Button Grid.Column="1"
-                    Content="..."
-                    Style="{StaticResource ButtonSecondary}"
-                    Padding="10,0"
-                    Command="{Binding BrowseIbExpertCommand}"/>
+        <!-- Sidebar interna -->
+        <Grid Grid.Column="0" Background="{StaticResource SidebarBackground}">
+            <StackPanel Margin="0,12,0,0">
+                <!-- Geral -->
+                <Button Command="{Binding NavGeralCommand}"
+                        Style="{StaticResource NavButton}">
+                    <Button.Resources>
+                        <Style TargetType="Button" BasedOn="{StaticResource NavButton}">
+                            <Style.Triggers>
+                                <DataTrigger Binding="{Binding AbaGeralAtiva}" Value="True">
+                                    <Setter Property="Background" Value="{StaticResource SidebarItemActive}"/>
+                                </DataTrigger>
+                            </Style.Triggers>
+                        </Style>
+                    </Button.Resources>
+                    <StackPanel Orientation="Horizontal">
+                        <TextBlock Text="⚙" Margin="0,0,8,0" Foreground="{StaticResource TextSecondary}"/>
+                        <TextBlock Text="Geral" Foreground="{StaticResource TextPrimary}"/>
+                    </StackPanel>
+                </Button>
+                <!-- Patchnotes -->
+                <Button Command="{Binding NavPatchnotesCommand}"
+                        Style="{StaticResource NavButton}">
+                    <Button.Resources>
+                        <Style TargetType="Button" BasedOn="{StaticResource NavButton}">
+                            <Style.Triggers>
+                                <DataTrigger Binding="{Binding AbaPatchnotesAtiva}" Value="True">
+                                    <Setter Property="Background" Value="{StaticResource SidebarItemActive}"/>
+                                </DataTrigger>
+                            </Style.Triggers>
+                        </Style>
+                    </Button.Resources>
+                    <StackPanel Orientation="Horizontal">
+                        <TextBlock Text="📋" Margin="0,0,8,0" Foreground="{StaticResource TextSecondary}"/>
+                        <TextBlock Text="Patchnotes" Foreground="{StaticResource TextPrimary}"/>
+                    </StackPanel>
+                </Button>
+            </StackPanel>
         </Grid>
 
-        <!-- ── Versão do Utils ── -->
-        <TextBlock Text="Versão do Utils"
-                   Foreground="{StaticResource TextSecondary}"
-                   FontSize="11"
-                   FontWeight="SemiBold"
-                   Margin="0,24,0,10"/>
+                    <!-- Geral -->
+                    <ScrollViewer Padding="24,24,24,8"
+                                  VerticalScrollBarVisibility="Auto"
+                                  Visibility="{Binding AbaGeralAtiva, Converter={StaticResource BoolToVisibility}}">
+                        <StackPanel>
+                            <TextBlock Text="Geral"
+                                       Foreground="{StaticResource TextPrimary}"
+                                       FontWeight="SemiBold"
+                                       Margin="0,0,0,20"/>
 
-        <TextBlock Foreground="{StaticResource TextSecondary}"
-                   Margin="0,0,0,8">
-            <Run Text="Versão atual: "/>
-            <Run Text="{Binding VersaoAtual, Mode=OneWay}" FontWeight="SemiBold"/>
-        </TextBlock>
+                            <TextBlock Text="IBExpert"
+                                       Foreground="{StaticResource TextSecondary}"
+                                       FontWeight="SemiBold"
+                                       Margin="0,0,0,8"/>
 
-        <TextBlock Text="Selecione uma versão para instalar:"
-                   Foreground="{StaticResource TextSecondary}"
-                   Margin="0,0,0,4"/>
+                            <TextBlock Text="Caminho do executável"
+                                       Foreground="{StaticResource TextSecondary}"
+                                       Margin="0,0,0,4"/>
 
-        <Grid Margin="0,0,0,4">
-            <Grid.ColumnDefinitions>
-                <ColumnDefinition Width="*"/>
-                <ColumnDefinition Width="Auto"/>
-            </Grid.ColumnDefinitions>
-            <ComboBox Grid.Column="0"
-                      ItemsSource="{Binding VersoesDisponiveis}"
-                      SelectedItem="{Binding VersaoSelecionada}"
-                      DisplayMemberPath="Versao"
-                      IsEnabled="{Binding PodeInteragirComVersoes}"
-                      Margin="0,0,6,0"/>
-            <Button Grid.Column="1"
-                    Content="Trocar Versão"
-                    Style="{StaticResource ButtonSecondary}"
-                    Padding="10,0"
-                    Command="{Binding TrocarVersaoCommand}"/>
-        </Grid>
+                            <Grid>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*"/>
+                                    <ColumnDefinition Width="Auto"/>
+                                </Grid.ColumnDefinitions>
+                                <TextBox Grid.Column="0"
+                                         Text="{Binding IbExpertPath, UpdateSourceTrigger=PropertyChanged}"
+                                         Margin="0,0,6,0"/>
+                                <Button Grid.Column="1"
+                                        Content="..."
+                                        Style="{StaticResource ButtonSecondary}"
+                                        Padding="10,0"
+                                        Command="{Binding BrowseIbExpertCommand}"/>
+                            </Grid>
 
-        <!-- Carregando versões -->
-        <TextBlock Text="Carregando versões disponíveis..."
-                   Foreground="{StaticResource TextSecondary}"
-                   FontStyle="Italic"
-                   FontSize="11"
-                   Margin="0,2,0,0"
-                   Visibility="{Binding IsCarregandoVersoes, Converter={StaticResource BoolToVisibility}}"/>
+                            <!-- ── Versão do Utils ── -->
+                            <TextBlock Text="Versão do Utils"
+                                       Foreground="{StaticResource TextSecondary}"
+                                       FontSize="11"
+                                       FontWeight="SemiBold"
+                                       Margin="0,24,0,10"/>
 
-        <!-- Baixando / trocando -->
-        <TextBlock Text="Baixando versão selecionada, o Utils será reiniciado em breve..."
-                   Foreground="{StaticResource TextSecondary}"
-                   FontStyle="Italic"
-                   FontSize="11"
-                   Margin="0,2,0,0"
-                   Visibility="{Binding IsTrocandoVersao, Converter={StaticResource BoolToVisibility}}"/>
+                            <TextBlock Foreground="{StaticResource TextSecondary}"
+                                       Margin="0,0,0,8">
+                                <Run Text="Versão atual: "/>
+                                <Run Text="{Binding VersaoAtual, Mode=OneWay}" FontWeight="SemiBold"/>
+                            </TextBlock>
 
-        <!-- Erro -->
-        <TextBlock Text="{Binding ErroVersoes}"
-                   Foreground="{StaticResource StatusError}"
-                   FontSize="11"
-                   TextWrapping="Wrap"
-                   Margin="0,2,0,0"
-                   Visibility="{Binding TemErroVersoes, Converter={StaticResource BoolToVisibility}}"/>
+                            <TextBlock Text="Selecione uma versão para instalar:"
+                                       Foreground="{StaticResource TextSecondary}"
+                                       Margin="0,0,0,4"/>
 
-        <!-- Botões -->
-        <StackPanel Orientation="Horizontal"
-                    HorizontalAlignment="Right"
-                    Margin="0,24,0,0">
-            <Button Content="Cancelar"
-                    Style="{StaticResource ButtonSecondary}"
-                    Command="{Binding CancelarCommand}"
-                    Margin="0,0,8,0"/>
-            <Button Content="Salvar"
-                    Style="{StaticResource ButtonPrimary}"
-                    Command="{Binding SalvarCommand}"/>
-        </StackPanel>
-    </StackPanel>
+                            <Grid Margin="0,0,0,4">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*"/>
+                                    <ColumnDefinition Width="Auto"/>
+                                </Grid.ColumnDefinitions>
+                                <ComboBox Grid.Column="0"
+                                          ItemsSource="{Binding VersoesDisponiveis}"
+                                          SelectedItem="{Binding VersaoSelecionada}"
+                                          DisplayMemberPath="Versao"
+                                          IsEnabled="{Binding PodeInteragirComVersoes}"
+                                          Margin="0,0,6,0"/>
+                                <Button Grid.Column="1"
+                                        Content="Trocar Versão"
+                                        Style="{StaticResource ButtonSecondary}"
+                                        Padding="10,0"
+                                        Command="{Binding TrocarVersaoCommand}"/>
+                            </Grid>
+
+                            <!-- Carregando versões -->
+                            <TextBlock Text="Carregando versões disponíveis..."
+                                       Foreground="{StaticResource TextSecondary}"
+                                       FontStyle="Italic"
+                                       FontSize="11"
+                                       Margin="0,2,0,0"
+                                       Visibility="{Binding IsCarregandoVersoes, Converter={StaticResource BoolToVisibility}}"/>
+
+                            <!-- Baixando / trocando -->
+                            <TextBlock Text="Baixando versão selecionada, o Utils será reiniciado em breve..."
+                                       Foreground="{StaticResource TextSecondary}"
+                                       FontStyle="Italic"
+                                       FontSize="11"
+                                       Margin="0,2,0,0"
+                                       Visibility="{Binding IsTrocandoVersao, Converter={StaticResource BoolToVisibility}}"/>
+
+                            <!-- Erro -->
+                            <TextBlock Text="{Binding ErroVersoes}"
+                                       Foreground="{StaticResource StatusError}"
+                                       FontSize="11"
+                                       TextWrapping="Wrap"
+                                       Margin="0,2,0,0"
+                                       Visibility="{Binding TemErroVersoes, Converter={StaticResource BoolToVisibility}}"/>
+                        </StackPanel>
+                    </ScrollViewer>
+
+                    <!-- Patchnotes: feed linear de cards -->
+                    <ScrollViewer Padding="20,20,20,20"
+                                  VerticalScrollBarVisibility="Auto"
+                                  Visibility="{Binding AbaPatchnotesAtiva, Converter={StaticResource BoolToVisibility}}">
+                        <ItemsControl ItemsSource="{Binding Patches}">
+                            <ItemsControl.ItemTemplate>
+                                <DataTemplate>
+                                    <Border Margin="0,0,0,16"
+                                            Background="{StaticResource SidebarBackground}"
+                                            BorderBrush="{StaticResource PanelBorder}"
+                                            BorderThickness="0,0,0,1"
+                                            Padding="0,0,0,16">
+                                        <StackPanel>
+                                            <!-- Cabeçalho: badge de versão -->
+                                            <Grid Margin="0,0,0,10">
+                                                <Grid.ColumnDefinitions>
+                                                    <ColumnDefinition Width="Auto"/>
+                                                    <ColumnDefinition Width="*"/>
+                                                </Grid.ColumnDefinitions>
+                                                <!-- Badge de versão -->
+                                                <Border Grid.Column="0"
+                                                        Background="{StaticResource SidebarItemActive}"
+                                                        CornerRadius="3"
+                                                        Padding="8,3"
+                                                        VerticalAlignment="Center">
+                                                    <TextBlock Text="{Binding Versao}"
+                                                               Foreground="{StaticResource SidebarActiveIndicator}"
+                                                               FontWeight="Bold"
+                                                               FontSize="14"/>
+                                                </Border>
+                                                <!-- Linha decorativa -->
+                                                <Border Grid.Column="1"
+                                                        Height="1"
+                                                        Background="{StaticResource PanelBorder}"
+                                                        Margin="10,0,0,0"
+                                                        VerticalAlignment="Center"
+                                                        Opacity="0.5"/>
+                                            </Grid>
+
+                                            <!-- Resumo -->
+                                            <TextBlock converters:MarkdownInlinesHelper.MarkdownText="{Binding Resumo}"
+                                                       Foreground="{StaticResource TextSecondary}"
+                                                       TextWrapping="Wrap"
+                                                       Margin="0,0,0,10"
+                                                       Visibility="{Binding TemResumo, Converter={StaticResource BoolToVisibility}}"
+                                                       LineHeight="20"/>
+
+                                            <!-- Features -->
+                                            <StackPanel Visibility="{Binding TemFeatures, Converter={StaticResource BoolToVisibility}}"
+                                                        Margin="0,0,0,8">
+                                                <StackPanel Orientation="Horizontal" Margin="0,0,0,6">
+                                                    <Border Width="3" CornerRadius="2"
+                                                            Background="{StaticResource StatusSuccess}"
+                                                            Margin="0,0,8,0"/>
+                                                    <TextBlock Text="Features"
+                                                               FontWeight="SemiBold"
+                                                               Foreground="{StaticResource StatusSuccess}"/>
+                                                </StackPanel>
+                                                <ItemsControl ItemsSource="{Binding Features}" Margin="11,0,0,0">
+                                                    <ItemsControl.ItemTemplate>
+                                                        <DataTemplate>
+                                                            <Grid Margin="0,2">
+                                                                <Grid.ColumnDefinitions>
+                                                                    <ColumnDefinition Width="14"/>
+                                                                    <ColumnDefinition Width="*"/>
+                                                                </Grid.ColumnDefinitions>
+                                                                <TextBlock Grid.Column="0" Text="›"
+                                                                           Foreground="{StaticResource StatusSuccess}"
+                                                                           VerticalAlignment="Top"
+                                                                           Margin="0,1,0,0"/>
+                                                                <TextBlock Grid.Column="1"
+                                                                           converters:MarkdownInlinesHelper.MarkdownText="{Binding}"
+                                                                           Foreground="{StaticResource TextPrimary}"
+                                                                           TextWrapping="Wrap"
+                                                                           LineHeight="20"/>
+                                                            </Grid>
+                                                        </DataTemplate>
+                                                    </ItemsControl.ItemTemplate>
+                                                </ItemsControl>
+                                            </StackPanel>
+
+                                            <!-- Bugs Corrigidos -->
+                                            <StackPanel Visibility="{Binding TemBugs, Converter={StaticResource BoolToVisibility}}">
+                                                <StackPanel Orientation="Horizontal" Margin="0,0,0,6">
+                                                    <Border Width="3" CornerRadius="2"
+                                                            Background="{StaticResource StatusWarning}"
+                                                            Margin="0,0,8,0"/>
+                                                    <TextBlock Text="Bugs Corrigidos"
+                                                               FontWeight="SemiBold"
+                                                               Foreground="{StaticResource StatusWarning}"/>
+                                                </StackPanel>
+                                                <ItemsControl ItemsSource="{Binding BugsCorrigidos}" Margin="11,0,0,0">
+                                                    <ItemsControl.ItemTemplate>
+                                                        <DataTemplate>
+                                                            <Grid Margin="0,2">
+                                                                <Grid.ColumnDefinitions>
+                                                                    <ColumnDefinition Width="14"/>
+                                                                    <ColumnDefinition Width="*"/>
+                                                                </Grid.ColumnDefinitions>
+                                                                <TextBlock Grid.Column="0" Text="›"
+                                                                           Foreground="{StaticResource StatusWarning}"
+                                                                           VerticalAlignment="Top"
+                                                                           Margin="0,1,0,0"/>
+                                                                <TextBlock Grid.Column="1"
+                                                                           converters:MarkdownInlinesHelper.MarkdownText="{Binding}"
+                                                                           Foreground="{StaticResource TextPrimary}"
+                                                                           TextWrapping="Wrap"
+                                                                           LineHeight="20"/>
+                                                            </Grid>
+                                                        </DataTemplate>
+                                                    </ItemsControl.ItemTemplate>
+                                                </ItemsControl>
+                                            </StackPanel>
+                                        </StackPanel>
+                                    </Border>
+                                </DataTemplate>
+                            </ItemsControl.ItemTemplate>
+                        </ItemsControl>
+                    </ScrollViewer>
+                </Grid>
+
+                <!-- Rodapé com botões — visível apenas em Geral -->
+                <Border Grid.Row="1"
+                        BorderBrush="{StaticResource PanelBorder}"
+                        BorderThickness="0,1,0,0"
+                        Padding="16,10"
+                        Visibility="{Binding AbaGeralAtiva, Converter={StaticResource BoolToVisibility}}">
+                    <StackPanel Orientation="Horizontal"
+                                HorizontalAlignment="Right">
+                        <Button Content="Cancelar"
+                                Style="{StaticResource ButtonSecondary}"
+                                Command="{Binding CancelarCommand}"
+                                Margin="0,0,8,0"
+                                MinWidth="72"/>
+                        <Button Content="Salvar"
+                                Style="{StaticResource ButtonPrimary}"
+                                Command="{Binding SalvarCommand}"
+                                MinWidth="72"/>
+                    </StackPanel>
+                </Border>
+            </Grid>
+        </Border>
+    </Grid>
 </UserControl>
 

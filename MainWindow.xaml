@@ -183,10 +183,16 @@
         <!-- Overlay de configurações (cobre toda a janela) -->
         <Grid Grid.Column="0" Grid.ColumnSpan="2"
               Visibility="{Binding ConfigAberto, Converter={StaticResource BoolToVisibility}}">
-            <Rectangle Fill="{StaticResource OverlayBackground}"/>
+            <Rectangle Fill="{StaticResource OverlayBackground}">
+                <Rectangle.InputBindings>
+                    <MouseBinding MouseAction="LeftClick"
+                                  Command="{Binding ConfiguracoesVM.CancelarCommand}"/>
+                </Rectangle.InputBindings>
+            </Rectangle>
             <Border HorizontalAlignment="Center"
                     VerticalAlignment="Center"
-                    Width="460"
+                    Width="700"
+                    Height="480"
                     Background="{StaticResource PanelBackground}"
                     BorderBrush="{StaticResource PanelBorder}"
                     BorderThickness="1"
