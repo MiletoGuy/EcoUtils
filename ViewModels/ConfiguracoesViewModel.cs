@@ -52,6 +52,13 @@ public class ConfiguracoesViewModel : ViewModelBase
         set => SetProperty(ref _ibExpertPath, value);
     }
 
+    private int _limiteLinhasConsulta;
+    public int LimiteLinhasConsulta
+    {
+        get => _limiteLinhasConsulta;
+        set => SetProperty(ref _limiteLinhasConsulta, value);
+    }
+
     public ICommand SalvarCommand         { get; }
     public ICommand CancelarCommand       { get; }
     public ICommand BrowseIbExpertCommand { get; }
@@ -61,16 +68,18 @@ public class ConfiguracoesViewModel : ViewModelBase
 
     public ConfiguracoesViewModel(IUserSettingsService userSettingsService, Action fechar)
     {
-        _userSettingsService = userSettingsService;
-        _fechar              = fechar;
-        _ibExpertPath        = userSettingsService.Settings.IbExpertPath;
+        _userSettingsService    = userSettingsService;
+        _fechar                  = fechar;
+        _ibExpertPath            = userSettingsService.Settings.IbExpertPath;
+        _limiteLinhasConsulta    = userSettingsService.Settings.LimiteLinhasConsulta;
 
         NavGeralCommand      = new RelayCommand(_ => AbaAtiva = AbaConfiguracoes.Geral);
         NavPatchnotesCommand = new RelayCommand(_ => AbaAtiva = AbaConfiguracoes.Patchnotes);
 
         SalvarCommand = new AsyncRelayCommand(async _ =>
         {
-            _userSettingsService.Settings.IbExpertPath = IbExpertPath.Trim();
+            _userSettingsService.Settings.IbExpertPath         = IbExpertPath.Trim();
+            _userSettingsService.Settings.LimiteLinhasConsulta  = LimiteLinhasConsulta <= 0 ? 1000 : LimiteLinhasConsulta;
             await _userSettingsService.SalvarAsync();
             _fechar();
         });
@@ -100,8 +109,9 @@ public class ConfiguracoesViewModel : ViewModelBase
     /// <summary>Sincroniza campos com o valor salvo atual (ao abrir o painel).</summary>
     public void Resetar()
     {
-        IbExpertPath = _userSettingsService.Settings.IbExpertPath;
-        AbaAtiva     = AbaConfiguracoes.Geral;
+        IbExpertPath          = _userSettingsService.Settings.IbExpertPath;
+        LimiteLinhasConsulta  = _userSettingsService.Settings.LimiteLinhasConsulta;
+        AbaAtiva              = AbaConfiguracoes.Geral;
     }
 
     private static IReadOnlyList<PatchnotePatch> CarregarPatches()

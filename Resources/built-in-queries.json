@@ -1,5 +1,16 @@
 [
   {
+    "id": "logs-alteracoes-produto",
+    "nome": "Log de alterações por produto",
+    "categoria": "Logs",
+    "descricao": "Retorna todos os registros de auditoria que referenciam um produto específico. Pesquisa o valor antigo (VALOROLD) nos campos de log e traz todos os campos alterados na mesma operação.",
+    "sql": "with AUXILIALOCALIZA\nas (select C.IDLOG as AUXLOG\n    from TGERLOGTABELACAMPOS C\n    inner join TGERLOGTABELA T on (C.IDLOG = T.IDLOG)\n    where C.VALOROLD = :PRODUTO)\n\nselect *\nfrom AUXILIALOCALIZA AUX\ninner join TGERLOGTABELACAMPOS C2 on (C2.IDLOG = AUX.AUXLOG)\ninner join TGERLOGTABELA T2 on (C2.IDLOG = T2.IDLOG)",
+    "parametros": [
+      { "nome": "PRODUTO", "tipo": "String", "descricao": "Código ou identificador do produto a pesquisar no log" }
+    ],
+    "isBuiltIn": true
+  },
+  {
     "id": "sistema-timestamp",
     "nome": "Timestamp do servidor",
     "categoria": "Sistema",

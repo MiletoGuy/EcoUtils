@@ -16,7 +16,8 @@ public class BancoDadosViewModel : ViewModelBase
 
     // ── Sub-VMs ───────────────────────────────────────────────────────────────
 
-    public SqlLivreViewModel SqlLivreVM { get; }
+    public SqlLivreViewModel    SqlLivreVM    { get; }
+    public SqlLibraryViewModel  SqlLibraryVM  { get; }
 
     // ── Bancos disponíveis ────────────────────────────────────────────────────
 
@@ -101,17 +102,19 @@ public class BancoDadosViewModel : ViewModelBase
     // ── Ctor ──────────────────────────────────────────────────────────────────
 
     public BancoDadosViewModel(
-        ISqlExecutionService     executionService,
-        IDatabaseDiscoveryService discoveryService,
-        ISqlExportService        exportService,
-        IDialogService           dialogService,
-        IUserSettingsService     userSettingsService)
+        ISqlExecutionService      executionService,
+        IDatabaseDiscoveryService  discoveryService,
+        ISqlLibraryService         libraryService,
+        ISqlExportService          exportService,
+        IDialogService             dialogService,
+        IUserSettingsService       userSettingsService)
     {
         _executionService  = executionService;
         _discoveryService  = discoveryService;
         _dialogService     = dialogService;
 
-        SqlLivreVM = new SqlLivreViewModel(executionService, exportService, dialogService, userSettingsService);
+        SqlLivreVM   = new SqlLivreViewModel(executionService, exportService, dialogService, userSettingsService);
+        SqlLibraryVM = new SqlLibraryViewModel(libraryService, executionService, exportService, dialogService, userSettingsService);
 
         _executionService.TransacaoPendenteChanged += (_, _) =>
         {

@@ -158,16 +158,11 @@
         ═══════════════════════════════════════════════════════ -->
         <Grid Grid.Row="1">
 
-            <!-- Conteúdo vazio quando nenhuma aba está ativa -->
-            <Border Visibility="{Binding SqlLivreAberto, Converter={StaticResource InverseBoolToVisibility}}"
-                    Background="{StaticResource AppBackground}">
-                <TextBlock Text="Selecione um banco e use o botão ⌨ para abrir o executor SQL livre."
-                           Foreground="{StaticResource TextSecondary}"
-                           HorizontalAlignment="Center"
-                           VerticalAlignment="Center"/>
-            </Border>
+            <!-- Biblioteca de SQLs (padrão) -->
+            <views:SqlLibraryView DataContext="{Binding SqlLibraryVM}"
+                                  Visibility="{Binding SqlLivreAberto, Converter={StaticResource InverseBoolToVisibility}}"/>
 
-            <!-- Flyout do executor SQL livre (ocupa toda a área principal) -->
+            <!-- Flyout do executor SQL livre -->
             <views:SqlLivreView DataContext="{Binding SqlLivreVM}"
                                 Visibility="{Binding SqlLivreAberto, Converter={StaticResource BoolToVisibility}}"/>
         </Grid>
