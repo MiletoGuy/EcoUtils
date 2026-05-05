@@ -21,6 +21,10 @@
     <Content Include="appsettings.json">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Content>
+    <Content Include="Documentos\PatchNotes\v*.md">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+      <Link>PatchNotes\%(Filename)%(Extension)</Link>
+    </Content>
     <Resource Include="Assets\Utils_icon.ico" />
   </ItemGroup>
 
