@@ -67,6 +67,18 @@
             </StackPanel>
         </Grid>
 
+        <!-- Painel de conteúdo -->
+        <Border Grid.Column="1"
+                BorderBrush="{StaticResource PanelBorder}"
+                BorderThickness="1,0,0,0">
+            <Grid>
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="*"/>
+                    <RowDefinition Height="Auto"/>
+                </Grid.RowDefinitions>
+
+                <!-- Conteúdo das abas -->
+                <Grid Grid.Row="0">
                     <!-- Geral -->
                     <ScrollViewer Padding="24,24,24,8"
                                   VerticalScrollBarVisibility="Auto"

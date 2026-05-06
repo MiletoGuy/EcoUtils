@@ -22,8 +22,9 @@ public class LaunchService : ILaunchService
         {
             var info = new ProcessStartInfo
             {
-                FileName        = instancia.ExecutavelPath,
-                UseShellExecute = true
+                FileName         = instancia.ExecutavelPath,
+                WorkingDirectory = Path.GetDirectoryName(instancia.ExecutavelPath)!,
+                UseShellExecute  = true
             };
             Process.Start(info);
         });

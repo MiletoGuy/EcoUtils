@@ -1,6 +1,7 @@
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.IO;
+using System.Reflection;
 using System.Linq;
 using System.Threading.Tasks;
 using System.Windows.Input;
@@ -234,22 +235,29 @@ public class ConfiguracoesViewModel : ViewModelBase
     {
         try
         {
-            var dir = Path.Combine(AppContext.BaseDirectory, "PatchNotes");
-            if (!Directory.Exists(dir)) return [];
+            var assembly = Assembly.GetExecutingAssembly();
+            const string prefix = "PatchNotes.";
 
-            return Directory.GetFiles(dir, "v*.md")
-                .Select(f =>
+            return assembly.GetManifestResourceNames()
+                .Where(n => n.Contains(prefix, StringComparison.OrdinalIgnoreCase)
+                         && n.EndsWith(".md", StringComparison.OrdinalIgnoreCase))
+                .Select(name =>
                 {
-                    var nome   = Path.GetFileNameWithoutExtension(f);
-                    var partes = nome.TrimStart('v').Split('.');
-                    return new
-                    {
-                        Major    = partes.Length > 0 ? int.Parse(partes[0]) : 0,
-                        Minor    = partes.Length > 1 ? int.Parse(partes[1]) : 0,
-                        PatchNum = partes.Length > 2 ? int.Parse(partes[2]) : 0,
-                        Label    = nome,
-                        Conteudo = File.ReadAllText(f),
-                    };
+                    // nome do recurso: EcoUtils.Documentos.PatchNotes.v0.2.6.md
+                    // extrai o label (ex: "v0.2.6") removendo prefixo e ".md"
+                    var idx   = name.IndexOf(prefix, StringComparison.OrdinalIgnoreCase) + prefix.Length;
+                    var label = name.Substring(idx, name.Length - idx - ".md".Length);
+
+                    var partes = label.TrimStart('v').Split('.');
+                    int major    = partes.Length > 0 && int.TryParse(partes[0], out var maj) ? maj : 0;
+                    int minor    = partes.Length > 1 && int.TryParse(partes[1], out var min) ? min : 0;
+                    int patchNum = partes.Length > 2 && int.TryParse(partes[2], out var pat) ? pat : 0;
+
+                    using var stream  = assembly.GetManifestResourceStream(name)!;
+                    using var reader  = new StreamReader(stream);
+                    var conteudo = reader.ReadToEnd();
+
+                    return new { Major = major, Minor = minor, PatchNum = patchNum, Label = label, Conteudo = conteudo };
                 })
                 .OrderByDescending(p => p.Major)
                 .ThenByDescending(p => p.Minor)
