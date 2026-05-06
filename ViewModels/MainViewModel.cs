@@ -57,11 +57,11 @@ public class MainViewModel : ViewModelBase
 
     public ICommand AtualizarCommand { get; }
 
-    public MainViewModel(ExecutarEcoViewModel executarEcoVm, IUserSettingsService userSettingsService, IUpdateService updateService)
+    public MainViewModel(ExecutarEcoViewModel executarEcoVm, IUserSettingsService userSettingsService, IUpdateService updateService, IDialogService dialogService)
     {
         _updateService = updateService;
 
-        ConfiguracoesVM  = new ConfiguracoesViewModel(userSettingsService, () => ConfigAberto = false);
+        ConfiguracoesVM  = new ConfiguracoesViewModel(userSettingsService, updateService, dialogService, () => ConfigAberto = false);
         AbrirConfigCommand = new RelayCommand(_ =>
         {
             ConfiguracoesVM.Resetar();

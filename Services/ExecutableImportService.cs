@@ -22,22 +22,14 @@ public class ExecutableImportService : IExecutableImportService
             string ext = Path.GetExtension(caminhoArquivo);
 
             if (ext.Equals(".exe", StringComparison.OrdinalIgnoreCase))
-            {
-                string nome = Path.GetFileName(caminhoArquivo);
-                if (!nome.Equals("eco.exe", StringComparison.OrdinalIgnoreCase))
-                    return ExecutableImportResult.Falha(
-                        $"O arquivo selecionado é \"{nome}\". " +
-                        "Selecione o arquivo \"eco.exe\" ou um pacote compactado (.zip, .rar, .7z).");
-
                 return ExecutableImportResult.Ok(caminhoArquivo);
-            }
 
             if (_formatosCompactados.Contains(ext))
                 return DescompactarELocalizar(caminhoArquivo, progresso, ct);
 
             return ExecutableImportResult.Falha(
                 $"Formato de arquivo não suportado: \"{ext}\". " +
-                "São aceitos eco.exe, .zip, .rar e .7z.");
+                "São aceitos arquivos .exe ou pacotes compactados (.zip, .rar, .7z).");
         }, ct);
     }
 
@@ -72,15 +64,15 @@ public class ExecutableImportService : IExecutableImportService
                 done++;
             }
 
-            progresso.Report(new DatabaseImportProgress("Extração concluída. Localizando eco.exe...", 100));
+            progresso.Report(new DatabaseImportProgress("Extração concluída. Localizando executável...", 100));
 
             string? encontrado = Directory
-                .EnumerateFiles(tempDir, "eco.exe", SearchOption.AllDirectories)
+                .EnumerateFiles(tempDir, "*.exe", SearchOption.AllDirectories)
                 .FirstOrDefault();
 
             if (encontrado is null)
                 return ExecutableImportResult.Falha(
-                    "eco.exe não encontrado no arquivo compactado.");
+                    "Nenhum arquivo .exe encontrado no pacote compactado.");
 
             // Copia para fora do tempDir antes da limpeza
             string destTemp = Path.Combine(

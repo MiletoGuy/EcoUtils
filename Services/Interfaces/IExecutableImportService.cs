@@ -5,8 +5,8 @@ namespace EcoUtils.Services.Interfaces;
 public interface IExecutableImportService
 {
     /// <summary>
-    /// Recebe o arquivo selecionado pelo usuário (.exe, .zip, .rar ou .7z),
-    /// descompacta se necessário, localiza o eco.exe e retorna o caminho do .exe extraído.
+    /// Recebe o arquivo selecionado pelo usuário (qualquer .exe, .zip, .rar ou .7z),
+    /// descompacta se necessário, localiza o primeiro .exe encontrado e retorna seu caminho.
     /// Retorna null no ArquivoPath em caso de erro — use o campo Erro para detalhes.
     /// </summary>
     Task<ExecutableImportResult> ProcessarArquivoAsync(

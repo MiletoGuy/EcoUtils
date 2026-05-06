@@ -18,6 +18,7 @@ public class InstanceFlyoutViewModel : ViewModelBase
     private readonly IDatabaseImportService       _databaseImportService;
     private readonly IExecutableImportService     _executableImportService;
     private readonly IRestoreJobService           _restoreJobService;
+    private readonly IFileLockerService           _fileLockerService;
     private readonly IDialogService               _dialogService;
     private readonly ILogService                  _log;
     private readonly Func<EcoInstance, Task>      _onConfirmado;
@@ -365,6 +366,7 @@ public class InstanceFlyoutViewModel : ViewModelBase
         IDatabaseImportService databaseImportService,
         IExecutableImportService executableImportService,
         IRestoreJobService restoreJobService,
+        IFileLockerService fileLockerService,
         IDialogService dialogService,
         ILogService log,
         Func<EcoInstance, Task> onConfirmado,
@@ -379,6 +381,7 @@ public class InstanceFlyoutViewModel : ViewModelBase
         _databaseImportService    = databaseImportService;
         _executableImportService  = executableImportService;
         _restoreJobService        = restoreJobService;
+        _fileLockerService        = fileLockerService;
         _dialogService            = dialogService;
         _log                      = log;
         _onConfirmado             = onConfirmado;
@@ -674,8 +677,18 @@ public class InstanceFlyoutViewModel : ViewModelBase
             MensagemProgresso   = "Movendo banco para a pasta de dados...";
             ProgressoImportacao = 0;
 
-            string novoCaminho = await _databaseImportService.MoverEcoParaDadosAsync(
-                resultado.ArquivoPath!, apelido);
+            string? novoCaminho = null;
+            try
+            {
+                novoCaminho = await _databaseImportService.MoverEcoParaDadosAsync(
+                    resultado.ArquivoPath!, apelido);
+            }
+            catch (IOException)
+            {
+                novoCaminho = await TentarLiberarEMoverAsync(resultado.ArquivoPath!, apelido);
+            }
+
+            if (novoCaminho is null) return;
 
             var novoBanco = new EcoDatabase
             {
@@ -697,6 +710,39 @@ public class InstanceFlyoutViewModel : ViewModelBase
             MensagemProgresso         = string.Empty;
             ProgressoImportacao       = 0;
         }
+    }
+
+    private async System.Threading.Tasks.Task<string?> TentarLiberarEMoverAsync(
+        string arquivoEco, string apelido)
+    {
+        var travadores = _fileLockerService.ObterProcessosTravando(arquivoEco);
+
+        if (travadores.Count == 0)
+            throw new IOException("O arquivo está em uso por outro processo, " +
+                "mas não foi possível identificar qual. Feche os programas que possam estar usando o arquivo e tente novamente.");
+
+        string nomes = string.Join(", ",
+            travadores.Select(p => p.ProcessName).Distinct(StringComparer.OrdinalIgnoreCase));
+
+        string msg = travadores.Count == 1
+            ? $"O arquivo está sendo usado pelo processo:\n\n• {nomes}\n\nDeseja encerrá-lo para prosseguir com a importação?"
+            : $"O arquivo está sendo usado pelos processos:\n\n{string.Join("\n", travadores.Select(p => p.ProcessName).Distinct().Select(n => $"• {n}"))}\n\nDeseja encerrá-los para prosseguir com a importação?";
+
+        bool confirmar = _dialogService.Confirmar(
+            "Arquivo em uso",
+            msg,
+            "Encerrar e Importar");
+
+        if (!confirmar) return null;
+
+        MensagemProgresso = "Encerrando processos...";
+        foreach (var (id, _) in travadores)
+            _fileLockerService.EncerrarProcesso(id);
+
+        await System.Threading.Tasks.Task.Delay(800);
+
+        MensagemProgresso = "Movendo banco para a pasta de dados...";
+        return await _databaseImportService.MoverEcoParaDadosAsync(arquivoEco, apelido);
     }
 
     private async System.Threading.Tasks.Task AdicionarExeAsync()

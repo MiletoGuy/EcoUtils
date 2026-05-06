@@ -25,6 +25,7 @@ public class ExecutarEcoViewModel : ViewModelBase
     private readonly IDatabaseImportService     _databaseImportService;
     private readonly IExecutableImportService   _executableImportService;
     private readonly IRestoreJobService        _restoreJobService;
+    private readonly IFileLockerService        _fileLockerService;
     private readonly ILaunchService            _launchService;
     private readonly IDialogService            _dialogService;
     private readonly ILogService               _log;
@@ -171,6 +172,7 @@ public class ExecutarEcoViewModel : ViewModelBase
         IDatabaseImportService databaseImportService,
         IExecutableImportService executableImportService,
         IRestoreJobService restoreJobService,
+        IFileLockerService fileLockerService,
         ILaunchService launchService,
         IDialogService dialogService,
         ILogService log)
@@ -183,6 +185,7 @@ public class ExecutarEcoViewModel : ViewModelBase
         _databaseImportService    = databaseImportService;
         _executableImportService  = executableImportService;
         _restoreJobService        = restoreJobService;
+        _fileLockerService        = fileLockerService;
         _launchService            = launchService;
         _dialogService            = dialogService;
         _log                      = log;
@@ -262,6 +265,7 @@ public class ExecutarEcoViewModel : ViewModelBase
                 _databaseImportService,
                 _executableImportService,
                 _restoreJobService,
+                _fileLockerService,
                 _dialogService,
                 _log,
                 async instancia =>
@@ -305,6 +309,7 @@ public class ExecutarEcoViewModel : ViewModelBase
                 _databaseImportService,
                 _executableImportService,
                 _restoreJobService,
+                _fileLockerService,
                 _dialogService,
                 _log,
                 async instanciaEditada =>

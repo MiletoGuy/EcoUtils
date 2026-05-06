@@ -53,6 +53,7 @@ public partial class App : Application
         sc.AddSingleton<IInstanceSetupService,     InstanceSetupService>();
         sc.AddSingleton<IDatabaseImportService,    DatabaseImportService>();
         sc.AddSingleton<IExecutableImportService,  ExecutableImportService>();
+        sc.AddSingleton<IFileLockerService,        FileLockerService>();
         sc.AddSingleton<IRestoreService,           RestoreService>();
         sc.AddSingleton<IRestoreJobService,        RestoreJobService>();
         sc.AddSingleton<ILaunchService,            LaunchService>();

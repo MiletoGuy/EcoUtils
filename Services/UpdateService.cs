@@ -12,13 +12,45 @@ public record UpdateInfo(string Versao, string DownloadUrl);
 
 public class UpdateService : IUpdateService
 {
-    private const string ApiUrl = "https://api.github.com/repos/MiletoGuy/EcoUtils/releases/latest";
+    private const string ApiUrl        = "https://api.github.com/repos/MiletoGuy/EcoUtils/releases/latest";
+    private const string AllReleasesUrl = "https://api.github.com/repos/MiletoGuy/EcoUtils/releases";
 
     private static readonly HttpClient _http = new()
     {
         DefaultRequestHeaders = { { "User-Agent", "EcoUtils-Updater" } },
         Timeout = TimeSpan.FromSeconds(10)
     };
+
+    public string VersaoAtual => ObterVersaoAtual().ToString();
+
+    public async Task<IReadOnlyList<UpdateInfo>> ListarVersoesAsync()
+    {
+        try
+        {
+            var releases = await _http
+                .GetFromJsonAsync<GithubRelease[]>(AllReleasesUrl)
+                .ConfigureAwait(false);
+
+            if (releases is null) return Array.Empty<UpdateInfo>();
+
+            var resultado = new List<UpdateInfo>();
+            foreach (var release in releases)
+            {
+                var asset = release.Assets?.FirstOrDefault(
+                    a => a.Name.EndsWith(".exe", StringComparison.OrdinalIgnoreCase));
+                if (asset is null) continue;
+
+                resultado.Add(new UpdateInfo(
+                    release.TagName.TrimStart('v'),
+                    asset.BrowserDownloadUrl));
+            }
+            return resultado;
+        }
+        catch
+        {
+            return Array.Empty<UpdateInfo>();
+        }
+    }
 
     public async Task<UpdateInfo?> VerificarAtualizacaoAsync()
     {

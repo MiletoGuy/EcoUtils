@@ -9,7 +9,7 @@ namespace EcoUtils.Services;
 public class VersionCatalogService : IVersionCatalogService
 {
     private static readonly Regex _exeRegex =
-        new(@"^Eco_\d+_\d+\.exe$", RegexOptions.IgnoreCase | RegexOptions.Compiled);
+        new(@"^Eco_[^_]+_[^_]+\.exe$", RegexOptions.IgnoreCase | RegexOptions.Compiled);
 
     private readonly ILogService _log;
 

@@ -1,7 +1,12 @@
 <UserControl x:Class="EcoUtils.Views.ConfiguracoesView"
              xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:converters="clr-namespace:EcoUtils.Converters"
              Padding="24">
+    <UserControl.Resources>
+        <BooleanToVisibilityConverter x:Key="BoolToVisibility"/>
+        <converters:InverseBoolToVisibilityConverter x:Key="InverseBoolToVisibility"/>
+    </UserControl.Resources>
     <StackPanel>
         <!-- Título -->
         <TextBlock Text="Configurações"
@@ -35,6 +40,65 @@
                     Command="{Binding BrowseIbExpertCommand}"/>
         </Grid>
 
+        <!-- ── Versão do Utils ── -->
+        <TextBlock Text="Versão do Utils"
+                   Foreground="{StaticResource TextSecondary}"
+                   FontSize="11"
+                   FontWeight="SemiBold"
+                   Margin="0,24,0,10"/>
+
+        <TextBlock Foreground="{StaticResource TextSecondary}"
+                   Margin="0,0,0,8">
+            <Run Text="Versão atual: "/>
+            <Run Text="{Binding VersaoAtual, Mode=OneWay}" FontWeight="SemiBold"/>
+        </TextBlock>
+
+        <TextBlock Text="Selecione uma versão para instalar:"
+                   Foreground="{StaticResource TextSecondary}"
+                   Margin="0,0,0,4"/>
+
+        <Grid Margin="0,0,0,4">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*"/>
+                <ColumnDefinition Width="Auto"/>
+            </Grid.ColumnDefinitions>
+            <ComboBox Grid.Column="0"
+                      ItemsSource="{Binding VersoesDisponiveis}"
+                      SelectedItem="{Binding VersaoSelecionada}"
+                      DisplayMemberPath="Versao"
+                      IsEnabled="{Binding PodeInteragirComVersoes}"
+                      Margin="0,0,6,0"/>
+            <Button Grid.Column="1"
+                    Content="Trocar Versão"
+                    Style="{StaticResource ButtonSecondary}"
+                    Padding="10,0"
+                    Command="{Binding TrocarVersaoCommand}"/>
+        </Grid>
+
+        <!-- Carregando versões -->
+        <TextBlock Text="Carregando versões disponíveis..."
+                   Foreground="{StaticResource TextSecondary}"
+                   FontStyle="Italic"
+                   FontSize="11"
+                   Margin="0,2,0,0"
+                   Visibility="{Binding IsCarregandoVersoes, Converter={StaticResource BoolToVisibility}}"/>
+
+        <!-- Baixando / trocando -->
+        <TextBlock Text="Baixando versão selecionada, o Utils será reiniciado em breve..."
+                   Foreground="{StaticResource TextSecondary}"
+                   FontStyle="Italic"
+                   FontSize="11"
+                   Margin="0,2,0,0"
+                   Visibility="{Binding IsTrocandoVersao, Converter={StaticResource BoolToVisibility}}"/>
+
+        <!-- Erro -->
+        <TextBlock Text="{Binding ErroVersoes}"
+                   Foreground="{StaticResource StatusError}"
+                   FontSize="11"
+                   TextWrapping="Wrap"
+                   Margin="0,2,0,0"
+                   Visibility="{Binding TemErroVersoes, Converter={StaticResource BoolToVisibility}}"/>
+
         <!-- Botões -->
         <StackPanel Orientation="Horizontal"
                     HorizontalAlignment="Right"
@@ -49,3 +113,4 @@
         </StackPanel>
     </StackPanel>
 </UserControl>
+
