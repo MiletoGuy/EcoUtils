@@ -175,7 +175,19 @@
             </Border>
 
             <!-- ── Resultado ─────────────────────────────────────────────── -->
-            <views:SqlResultView Grid.Row="1" DataContext="{Binding ResultadoVM}"/>
+            <Grid Grid.Row="1">
+                <views:SqlResultView DataContext="{Binding ResultadoVM}"/>
+
+                <!-- Loading overlay -->
+                <Border Visibility="{Binding Executando, Converter={StaticResource BoolToVisibility}}"
+                        Background="#CC1e1e1e">
+                    <TextBlock Text="Executando..."
+                               Foreground="{StaticResource TextSecondary}"
+                               FontSize="13"
+                               HorizontalAlignment="Center"
+                               VerticalAlignment="Center"/>
+                </Border>
+            </Grid>
 
         </Grid>
     </Grid>

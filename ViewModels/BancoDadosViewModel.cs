@@ -74,10 +74,17 @@ public class BancoDadosViewModel : ViewModelBase
     public string TextoStatusConexao => _estadoConexao switch
     {
         EstadoConexao.Conectado  => "conectado",
-        EstadoConexao.Erro       => "erro",
+        EstadoConexao.Erro       => "erro de conexão",
         EstadoConexao.Conectando => "conectando...",
         _                        => string.Empty
     };
+
+    private string? _mensagemErroConexao;
+    public string? MensagemErroConexao
+    {
+        get => _mensagemErroConexao;
+        private set => SetProperty(ref _mensagemErroConexao, value);
+    }
 
     // ── Transação ─────────────────────────────────────────────────────────────
 
@@ -149,6 +156,28 @@ public class BancoDadosViewModel : ViewModelBase
         _ = CarregarBancosAsync();
     }
 
+    // ── Seleção por caminho (chamado via right-click em Executar ECO) ──────────
+
+    public void SelecionarBancoPorCaminho(string ecoPath)
+    {
+        if (string.IsNullOrEmpty(ecoPath)) return;
+
+        var encontrado = BancosDisponiveis.FirstOrDefault(
+            b => string.Equals(b.EcoPath, ecoPath, StringComparison.OrdinalIgnoreCase));
+
+        if (encontrado is null)
+        {
+            encontrado = new EcoDatabase
+            {
+                EcoPath      = ecoPath,
+                NomeCompleto = System.IO.Path.GetFileNameWithoutExtension(ecoPath)
+            };
+            BancosDisponiveis.Add(encontrado);
+        }
+
+        BancoSelecionado = encontrado;
+    }
+
     // ── Carregamento de bancos ────────────────────────────────────────────────
 
     private async Task CarregarBancosAsync()
@@ -165,13 +194,15 @@ public class BancoDadosViewModel : ViewModelBase
     {
         if (_bancoSelecionado is null)
         {
-            EstadoConexao = EstadoConexao.Nenhum;
+            EstadoConexao       = EstadoConexao.Nenhum;
+            MensagemErroConexao = null;
             return;
         }
 
         EstadoConexao = EstadoConexao.Conectando;
-        bool ok = await _executionService.TestarConexaoAsync(_bancoSelecionado.EcoPath);
-        EstadoConexao = ok ? EstadoConexao.Conectado : EstadoConexao.Erro;
+        var erro = await _executionService.TestarConexaoAsync(_bancoSelecionado.EcoPath);
+        EstadoConexao       = erro is null ? EstadoConexao.Conectado : EstadoConexao.Erro;
+        MensagemErroConexao = erro;
     }
 
     private async Task RollbackSilenciosoAsync()

@@ -86,6 +86,12 @@ public class MainViewModel : ViewModelBase
 
         AbaAtiva = Abas[0];
 
+        executarEcoVm.AbrirBancoNoSqlCallback = caminho =>
+        {
+            AbaAtiva = Abas[1];
+            bancoDadosVm.SelecionarBancoPorCaminho(caminho);
+        };
+
         AtualizarCommand = new AsyncRelayCommand(
             _ => ExecutarAtualizacaoAsync(),
             _ => TemAtualizacao);

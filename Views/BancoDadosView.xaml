@@ -85,13 +85,28 @@
                                 </Style.Triggers>
                             </Style>
                         </Ellipse.Style>
+                        <Ellipse.ToolTip>
+                            <ToolTip Content="{Binding MensagemErroConexao}"
+                                     Visibility="{Binding ConexaoErro, Converter={StaticResource BoolToVisibility}}"/>
+                        </Ellipse.ToolTip>
                     </Ellipse>
 
                     <TextBlock Text="{Binding TextoStatusConexao}"
                                Foreground="{StaticResource TextSecondary}"
                                FontSize="11"
                                VerticalAlignment="Center"
-                               Margin="5,0,0,0"/>
+                               Margin="5,0,0,0">
+                        <TextBlock.Style>
+                            <Style TargetType="TextBlock">
+                                <Style.Triggers>
+                                    <DataTrigger Binding="{Binding ConexaoErro}" Value="True">
+                                        <Setter Property="Foreground" Value="{StaticResource StatusError}"/>
+                                        <Setter Property="ToolTip"    Value="{Binding MensagemErroConexao}"/>
+                                    </DataTrigger>
+                                </Style.Triggers>
+                            </Style>
+                        </TextBlock.Style>
+                    </TextBlock>
                 </StackPanel>
 
                 <!-- Indicador de transação pendente -->

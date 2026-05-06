@@ -247,7 +247,7 @@
                             </ToggleButton.Template>
                         </ToggleButton>
 
-                        <!-- Item selecionado -->
+                        <!-- Item selecionado (modo não-editável) -->
                         <ContentPresenter x:Name="ContentSite"
                                           Content="{TemplateBinding SelectionBoxItem}"
                                           ContentTemplate="{TemplateBinding SelectionBoxItemTemplate}"
@@ -256,6 +256,25 @@
                                           VerticalAlignment="Center"
                                           HorizontalAlignment="Left"
                                           IsHitTestVisible="False"/>
+
+                        <!-- Caixa de texto (modo editável — PART obrigatória) -->
+                        <TextBox x:Name="PART_EditableTextBox"
+                                 Text="{Binding Path=Text,
+                                                RelativeSource={RelativeSource TemplatedParent},
+                                                Mode=TwoWay,
+                                                UpdateSourceTrigger=PropertyChanged}"
+                                 Margin="7,4,28,4"
+                                 Background="Transparent"
+                                 Foreground="{StaticResource TextPrimary}"
+                                 BorderThickness="0"
+                                 Padding="0"
+                                 FontFamily="{StaticResource FontBase}"
+                                 FontSize="{StaticResource FontSizeBase}"
+                                 VerticalAlignment="Center"
+                                 HorizontalAlignment="Stretch"
+                                 Focusable="True"
+                                 Visibility="Collapsed"
+                                 IsReadOnly="{TemplateBinding IsReadOnly}"/>
 
                         <!-- Popup -->
                         <Popup x:Name="Popup"
@@ -276,6 +295,10 @@
                         </Popup>
                     </Grid>
                     <ControlTemplate.Triggers>
+                        <Trigger Property="IsEditable" Value="True">
+                            <Setter TargetName="ContentSite"          Property="Visibility" Value="Collapsed"/>
+                            <Setter TargetName="PART_EditableTextBox" Property="Visibility" Value="Visible"/>
+                        </Trigger>
                         <Trigger Property="IsEnabled" Value="False">
                             <Setter TargetName="ContentSite" Property="Opacity" Value="0.4"/>
                         </Trigger>

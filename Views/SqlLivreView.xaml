@@ -3,6 +3,10 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:views="clr-namespace:EcoUtils.Views">
 
+    <UserControl.Resources>
+        <BooleanToVisibilityConverter x:Key="BoolToVisibility"/>
+    </UserControl.Resources>
+
     <Grid>
         <Grid.RowDefinitions>
             <RowDefinition Height="*" MinHeight="120"/>  <!-- editor -->
@@ -55,7 +59,18 @@
         </Border>
 
         <!-- ── Resultado ────────────────────────────────────────── -->
-        <views:SqlResultView Grid.Row="2"
-                             DataContext="{Binding ResultadoVM}"/>
+        <Grid Grid.Row="2">
+            <views:SqlResultView DataContext="{Binding ResultadoVM}"/>
+
+            <!-- Loading overlay -->
+            <Border Visibility="{Binding Executando, Converter={StaticResource BoolToVisibility}}"
+                    Background="#CC1e1e1e">
+                <TextBlock Text="Executando..."
+                           Foreground="{StaticResource TextSecondary}"
+                           FontSize="13"
+                           HorizontalAlignment="Center"
+                           VerticalAlignment="Center"/>
+            </Border>
+        </Grid>
     </Grid>
 </UserControl>

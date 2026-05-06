@@ -34,7 +34,7 @@ public class SqlExecutionService : ISqlExecutionService, IDisposable
 
     // ── Teste de conexão ─────────────────────────────────────────────────────
 
-    public async Task<bool> TestarConexaoAsync(string ecoBankPath)
+    public async Task<string?> TestarConexaoAsync(string ecoBankPath)
     {
         try
         {
@@ -42,12 +42,12 @@ public class SqlExecutionService : ISqlExecutionService, IDisposable
             await conn.OpenAsync();
             await using var cmd = new FbCommand("SELECT CURRENT_TIMESTAMP FROM RDB$DATABASE", conn);
             await cmd.ExecuteScalarAsync();
-            return true;
+            return null;
         }
         catch (Exception ex)
         {
             _log.Error($"{nameof(SqlExecutionService)}.{nameof(TestarConexaoAsync)}", ex);
-            return false;
+            return ex.Message;
         }
     }
 

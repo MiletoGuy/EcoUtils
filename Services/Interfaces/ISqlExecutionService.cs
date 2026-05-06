@@ -15,9 +15,9 @@ public interface ISqlExecutionService
 
     /// <summary>
     /// Testa a conexão com o banco informado sem alterar o banco ativo.
-    /// Retorna <c>true</c> se a conexão foi bem-sucedida.
+    /// Retorna <c>null</c> se a conexão foi bem-sucedida, ou a mensagem de erro.
     /// </summary>
-    Task<bool> TestarConexaoAsync(string ecoBankPath);
+    Task<string?> TestarConexaoAsync(string ecoBankPath);
 
     /// <summary>
     /// Define o banco ativo para as próximas execuções.
