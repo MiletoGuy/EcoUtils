@@ -75,7 +75,7 @@
 
             <!-- Ícone de status de atualização (topo direito) -->
             <Grid HorizontalAlignment="Right" VerticalAlignment="Top"
-                  Margin="0,8,10,0" Width="28" Height="28">
+                  Margin="0,8,10,0" Height="28">
 
                 <!-- Verificando: spinner giratório cinza -->
                 <Border CornerRadius="4" Cursor="Hand"
@@ -112,34 +112,20 @@
                     </Ellipse>
                 </Border>
 
-                <!-- Sem atualização: checkmark -->
-                <Border CornerRadius="4" Cursor="Hand"
-                        ToolTip="Não há novas atualizações"
-                        Visibility="{Binding SemAtualizacao, Converter={StaticResource BoolToVisibility}}">
-                    <Border.Style>
-                        <Style TargetType="Border">
-                            <Setter Property="Background" Value="Transparent"/>
-                            <Style.Triggers>
-                                <Trigger Property="IsMouseOver" Value="True">
-                                    <Setter Property="Background" Value="{StaticResource ButtonSecondaryHover}"/>
-                                </Trigger>
-                            </Style.Triggers>
-                        </Style>
-                    </Border.Style>
-                    <TextBlock Text="✓" FontSize="14" FontWeight="Bold"
-                               HorizontalAlignment="Center" VerticalAlignment="Center"
-                               Foreground="{StaticResource StatusSuccess}"/>
-                </Border>
+                <!-- Sem atualização: nada exibido -->
 
-                <!-- Atualização disponível: botão de download -->
-                <Button Command="{Binding AtualizarCommand}"
-                        Style="{StaticResource ButtonIcon}"
-                        ToolTip="Atualizar agora"
-                        Width="28" Height="28" Padding="2"
+                <!-- Atualização disponível: botão verde destacado -->
+                <Button Command="{Binding AbrirFlyoutUpdateCommand}"
+                        Style="{StaticResource ButtonSuccess}"
+                        ToolTip="Nova versão disponível — clique para ver detalhes"
+                        Height="28" Padding="8,2"
                         Visibility="{Binding TemAtualizacao, Converter={StaticResource BoolToVisibility}}">
-                    <TextBlock Text="⭳" FontSize="17"
-                               Foreground="{StaticResource ButtonPrimaryBackground}"
-                               HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                    <StackPanel Orientation="Horizontal">
+                        <TextBlock Text="⭳" FontSize="15" Margin="0,0,5,0" VerticalAlignment="Center"
+                                   Foreground="#ffffff"/>
+                        <TextBlock Text="Atualizar" FontSize="12" VerticalAlignment="Center"
+                                   Foreground="#ffffff"/>
+                    </StackPanel>
                 </Button>
 
                 <!-- Atualizando: spinner azul -->
@@ -179,6 +165,52 @@
 
             </Grid>
         </Grid>
+
+        <!-- Flyout de atualização disponível -->
+        <Border Grid.Column="0" Grid.ColumnSpan="2"
+                Panel.ZIndex="10"
+                HorizontalAlignment="Right" VerticalAlignment="Top"
+                Margin="0,48,16,0"
+                Visibility="{Binding FlyoutUpdateAberto, Converter={StaticResource BoolToVisibility}}"
+                Background="{StaticResource PanelBackground}"
+                BorderBrush="{StaticResource ButtonSuccessBackground}"
+                BorderThickness="1"
+                CornerRadius="6"
+                Width="300"
+                Padding="18,14">
+            <Border.Effect>
+                <DropShadowEffect Color="#000000" BlurRadius="18" ShadowDepth="4" Opacity="0.55"/>
+            </Border.Effect>
+            <StackPanel>
+                <!-- Cabeçalho -->
+                <StackPanel Orientation="Horizontal" Margin="0,0,0,8">
+                    <TextBlock Text="⭳" FontSize="17"
+                               Foreground="{StaticResource ButtonSuccessBackground}"
+                               Margin="0,0,8,0" VerticalAlignment="Center"/>
+                    <TextBlock Text="Atualização disponível"
+                               FontSize="13" FontWeight="Bold"
+                               Foreground="{StaticResource TextPrimary}"
+                               VerticalAlignment="Center"/>
+                </StackPanel>
+                <!-- Mensagem -->
+                <TextBlock Foreground="{StaticResource TextSecondary}"
+                           Margin="0,0,0,16" TextWrapping="Wrap">
+                    <Run Text="Versão "/><Run Text="{Binding VersaoNova, Mode=OneWay}"/><Run Text=" está disponível."/>
+                    <LineBreak/>
+                    <Run Text="Deseja atualizar agora?"/>
+                </TextBlock>
+                <!-- Ações -->
+                <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
+                    <Button Content="Depois"
+                            Style="{StaticResource ButtonSecondary}"
+                            Margin="0,0,8,0"
+                            Command="{Binding DepoisCommand}"/>
+                    <Button Content="Atualizar agora"
+                            Style="{StaticResource ButtonSuccess}"
+                            Command="{Binding AtualizarCommand}"/>
+                </StackPanel>
+            </StackPanel>
+        </Border>
 
         <!-- Overlay de configurações (cobre toda a janela) -->
         <Grid Grid.Column="0" Grid.ColumnSpan="2"

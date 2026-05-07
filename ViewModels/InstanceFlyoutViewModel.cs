@@ -96,6 +96,7 @@ public class InstanceFlyoutViewModel : ViewModelBase
             _ = AtualizarStatusIniAsync();
             AtualizarCompatibilidade();
             ConfirmarCommand.RaiseCanExecuteChanged();
+            OnPropertyChanged(nameof(AguardandoExeAutoSelecionado));
         }
     }
 
@@ -332,17 +333,58 @@ public class InstanceFlyoutViewModel : ViewModelBase
         {
             if (!SetProperty(ref _baseEmRestauracao, value)) return;
             ConfirmarCommand.RaiseCanExecuteChanged();
+            OnPropertyChanged(nameof(AguardandoExeAutoSelecionado));
+
+            if (value && BancoSelecionado is not null)
+            {
+                var job = _restoreJobService.ObterPorDestino(BancoSelecionado.EcoPath);
+                if (job is not null)
+                {
+                    _jobObservado       = job;
+                    MensagemRestauracao = job.UltimaMensagem;
+                    job.PropertyChanged += OnJobPropertyChanged;
+                }
+            }
+            else
+            {
+                MensagemRestauracao = string.Empty;
+                UnsubscribeJob();
+            }
         }
     }
+
+    private RestoreJobEntry? _jobObservado;
+
+    private void OnJobPropertyChanged(object? sender, System.ComponentModel.PropertyChangedEventArgs e)
+    {
+        if (sender is RestoreJobEntry job && e.PropertyName == nameof(RestoreJobEntry.UltimaMensagem))
+            MensagemRestauracao = job.UltimaMensagem;
+    }
+
+    private void UnsubscribeJob()
+    {
+        if (_jobObservado is null) return;
+        _jobObservado.PropertyChanged -= OnJobPropertyChanged;
+        _jobObservado = null;
+    }
+
+    private string _mensagemRestauracao = string.Empty;
+    public string MensagemRestauracao
+    {
+        get => _mensagemRestauracao;
+        private set => SetProperty(ref _mensagemRestauracao, value);
+    }
+
+    /// <summary>True quando o banco está em restauração e o usuário ainda não selecionou executável — o exe será auto-selecionado após a restauração.</summary>
+    public bool AguardandoExeAutoSelecionado => BaseEmRestauracao && ExecutavelSelecionado is null;
 
     public bool PodeConfirmar =>
         !string.IsNullOrWhiteSpace(Apelido) &&
         !ApelidoDuplicado                   &&
-        ExecutavelSelecionado is not null    &&
         BancoSelecionado is not null         &&
-        EcoIniValido                        &&
         !IsImportandoBanco                  &&
-        !IsImportandoExe;
+        !IsImportandoExe                    &&
+        (AguardandoExeAutoSelecionado || (ExecutavelSelecionado is not null && EcoIniValido));
 
     public ICommand CancelarCommand                       { get; }
     public AsyncRelayCommand ConfirmarCommand             { get; }
@@ -854,42 +896,52 @@ public class InstanceFlyoutViewModel : ViewModelBase
 
             var prefs = BuildPreferencias();
 
-            bool fonteAlterada = _instanciaExistente is null
-                || _instanciaExistente.ExecutavelFontePath != ExecutavelSelecionado!.ExePath
-                || _instanciaExistente.BasePath            != BancoSelecionado!.EcoPath;
-
-            if (fonteAlterada)
+            if (ExecutavelSelecionado is not null)
             {
-                // Remove arquivos implantados anteriores (no-op em criação nova)
-                if (_instanciaExistente is not null)
-                    _instanceSetupService.Remover(
-                        _instanciaExistente.ExecutavelPath,
-                        _instanciaExistente.IniPath);
+                bool fonteAlterada = _instanciaExistente is null
+                    || _instanciaExistente.ExecutavelFontePath != ExecutavelSelecionado.ExePath
+                    || _instanciaExistente.BasePath            != BancoSelecionado!.EcoPath;
 
-                (exePath, iniPath) = await _instanceSetupService.ImplantarAsync(
-                    ExecutavelSelecionado!.ExePath,
-                    BancoSelecionado!.EcoPath,
-                    prefs);
+                if (fonteAlterada)
+                {
+                    // Remove arquivos implantados anteriores (no-op em criação nova)
+                    if (_instanciaExistente is not null)
+                        _instanceSetupService.Remover(
+                            _instanciaExistente.ExecutavelPath,
+                            _instanciaExistente.IniPath);
+
+                    (exePath, iniPath) = await _instanceSetupService.ImplantarAsync(
+                        ExecutavelSelecionado.ExePath,
+                        BancoSelecionado!.EcoPath,
+                        prefs);
+                }
+                else
+                {
+                    // Executável e base não mudaram — reutiliza os arquivos já implantados
+                    exePath = _instanciaExistente!.ExecutavelPath;
+                    iniPath = _instanciaExistente.IniPath;
+                    await _instanceSetupService.AtualizarPreferenciasAsync(iniPath, prefs);
+                }
             }
             else
             {
-                // Executável e base não mudaram — reutiliza os arquivos já implantados
-                exePath = _instanciaExistente!.ExecutavelPath;
-                iniPath = _instanciaExistente.IniPath;
-                await _instanceSetupService.AtualizarPreferenciasAsync(iniPath, prefs);
+                // Banco em restauração — executável será vinculado automaticamente ao final da restauração
+                exePath = string.Empty;
+                iniPath  = string.Empty;
             }
 
             var instancia = new EcoInstance
             {
-                Id                  = _instanciaExistente?.Id ?? Guid.NewGuid(),
-                Apelido             = Apelido.Trim(),
-                ExecutavelPath      = exePath,
-                ExecutavelFontePath = ExecutavelSelecionado!.ExePath,
-                ExecutavelNome      = ExecutavelSelecionado.NomeCompleto,
-                BasePath            = BancoSelecionado!.EcoPath,
-                BaseNome            = BancoSelecionado.NomeCompleto,
-                IniPath             = iniPath,
-                VersaoBanco         = _versaoBancoRaw ?? string.Empty
+                Id                      = _instanciaExistente?.Id ?? Guid.NewGuid(),
+                Apelido                 = Apelido.Trim(),
+                ExecutavelPath          = exePath,
+                ExecutavelFontePath     = ExecutavelSelecionado?.ExePath ?? string.Empty,
+                ExecutavelNome          = ExecutavelSelecionado?.NomeCompleto ?? string.Empty,
+                BasePath                = BancoSelecionado!.EcoPath,
+                BaseNome                = BancoSelecionado.NomeCompleto,
+                IniPath                 = iniPath,
+                VersaoBanco             = _versaoBancoRaw ?? string.Empty,
+                PreferenciasIniPendente = ExecutavelSelecionado is null ? prefs : null
             };
 
             await _onConfirmado(instancia);

@@ -43,19 +43,35 @@ public class MainViewModel : ViewModelBase
         {
             _estado = value;
             OnPropertyChanged(nameof(EstaVerificando));
-            OnPropertyChanged(nameof(SemAtualizacao));
             OnPropertyChanged(nameof(TemAtualizacao));
             OnPropertyChanged(nameof(EstaAtualizando));
             (AtualizarCommand as AsyncRelayCommand)?.RaiseCanExecuteChanged();
+            (AbrirFlyoutUpdateCommand as RelayCommand)?.RaiseCanExecuteChanged();
         }
     }
 
     public bool EstaVerificando  => _estado == EstadoUpdate.Verificando;
-    public bool SemAtualizacao   => _estado == EstadoUpdate.SemAtualizacao;
     public bool TemAtualizacao   => _estado == EstadoUpdate.AtualizacaoDisponivel;
     public bool EstaAtualizando  => _estado == EstadoUpdate.Atualizando;
 
-    public ICommand AtualizarCommand { get; }
+    // ── Flyout de atualização disponível ────────────────────────
+    private bool _flyoutUpdateAberto;
+    public bool FlyoutUpdateAberto
+    {
+        get => _flyoutUpdateAberto;
+        set => SetProperty(ref _flyoutUpdateAberto, value);
+    }
+
+    private string _versaoNova = string.Empty;
+    public string VersaoNova
+    {
+        get => _versaoNova;
+        private set => SetProperty(ref _versaoNova, value);
+    }
+
+    public ICommand AtualizarCommand       { get; }
+    public ICommand DepoisCommand          { get; }
+    public ICommand AbrirFlyoutUpdateCommand { get; }
 
     public MainViewModel(ExecutarEcoViewModel executarEcoVm, IUserSettingsService userSettingsService, IUpdateService updateService, IDialogService dialogService)
     {
@@ -84,6 +100,9 @@ public class MainViewModel : ViewModelBase
             _ => ExecutarAtualizacaoAsync(),
             _ => TemAtualizacao);
 
+        DepoisCommand            = new RelayCommand(_ => FlyoutUpdateAberto = false);
+        AbrirFlyoutUpdateCommand = new RelayCommand(_ => FlyoutUpdateAberto = true, _ => TemAtualizacao);
+
         _ = VerificarAtualizacaoAsync();
     }
 
@@ -94,11 +113,17 @@ public class MainViewModel : ViewModelBase
         Estado = _updateDisponivel is not null
             ? EstadoUpdate.AtualizacaoDisponivel
             : EstadoUpdate.SemAtualizacao;
+
+        VersaoNova = _updateDisponivel?.Versao ?? string.Empty;
+
+        if (_updateDisponivel is not null)
+            FlyoutUpdateAberto = true;
     }
 
     private async Task ExecutarAtualizacaoAsync()
     {
         if (_updateDisponivel is null) return;
+        FlyoutUpdateAberto = false;
         Estado = EstadoUpdate.Atualizando;
         await _updateService.AtualizarAsync(_updateDisponivel);
     }

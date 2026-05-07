@@ -456,13 +456,73 @@ public class ExecutarEcoViewModel : ViewModelBase
             _log.Info(nameof(OnJobFinalizado), $"Restauração concluída para \"{inst.Apelido}\". Consultando versão do banco...");
             await AtualizarVersaoBancoAsync(inst);
 
+            if (string.IsNullOrEmpty(inst.ExecutavelFontePath))
+                await TentarAutoSelecionarExeAsync(inst);
+
             await Task.Delay(TimeSpan.FromSeconds(30));
-            inst.StatusRestauracao         = null;
-            inst.UltimaMensagemRestauracao = null;
+            if (inst.StatusRestauracao != RestoreJobStatus.Falhou)
+            {
+                inst.StatusRestauracao         = null;
+                inst.UltimaMensagemRestauracao = null;
+            }
         }
         else if (job.Status == RestoreJobStatus.Falhou)
         {
             _log.Warn(nameof(OnJobFinalizado), $"Restauração falhou para \"{inst.Apelido}\": {job.Erro}");
+        }
+    }
+
+    private async Task TentarAutoSelecionarExeAsync(EcoInstance inst)
+    {
+        _log.Info(nameof(TentarAutoSelecionarExeAsync), $"Tentando auto-selecionar executável para \"{inst.Apelido}\"...");
+
+        var executaveis  = await _versionCatalogService.ListarExecutaveisAsync();
+        var versaoBanco  = ExtrairVersaoBancoRaw(inst.VersaoBanco);
+
+        EcoExecutavel? melhorExe = null;
+        if (versaoBanco is not null)
+        {
+            melhorExe = executaveis
+                .Where(e => string.Equals(ExtrairVersaoExeNome(e.NomeCompleto), versaoBanco, StringComparison.OrdinalIgnoreCase))
+                .OrderByDescending(e => e.NomeCompleto, StringComparer.OrdinalIgnoreCase)
+                .FirstOrDefault();
+        }
+
+        if (melhorExe is null)
+        {
+            var detalhe = versaoBanco is not null
+                ? $"nenhum executável compatível com a versão {versaoBanco} foi encontrado"
+                : "não foi possível determinar a versão do banco";
+            _log.Warn(nameof(TentarAutoSelecionarExeAsync),
+                $"Auto-seleção falhou para \"{inst.Apelido}\": {detalhe}.");
+            inst.StatusRestauracao = RestoreJobStatus.Falhou;
+            inst.ErroRestauracao   = $"Restauração concluída, mas {detalhe}. Edite a instância para configurar o executável.";
+            await _instanceRepository.SalvarAsync(new List<EcoInstance>(Instancias));
+            return;
+        }
+
+        try
+        {
+            var prefs = inst.PreferenciasIniPendente ?? new IniPreferencias();
+            var (exePath, iniPath) = await _instanceSetupService.ImplantarAsync(melhorExe.ExePath, inst.BasePath, prefs);
+
+            inst.ExecutavelPath          = exePath;
+            inst.ExecutavelFontePath     = melhorExe.ExePath;
+            inst.ExecutavelNome          = melhorExe.NomeCompleto;
+            inst.IniPath                 = iniPath;
+            inst.VersaoIncompativel      = false;
+            inst.PreferenciasIniPendente = null;
+
+            _log.Info(nameof(TentarAutoSelecionarExeAsync),
+                $"Executável \"{melhorExe.NomeCompleto}\" implantado automaticamente para \"{inst.Apelido}\".");
+
+            await _instanceRepository.SalvarAsync(new List<EcoInstance>(Instancias));
+        }
+        catch (Exception ex)
+        {
+            _log.Error(nameof(TentarAutoSelecionarExeAsync), ex);
+            inst.StatusRestauracao = RestoreJobStatus.Falhou;
+            inst.ErroRestauracao   = $"Restauração concluída, mas falha ao implantar o executável automaticamente: {ex.Message}";
         }
     }
 

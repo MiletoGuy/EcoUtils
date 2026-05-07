@@ -22,6 +22,8 @@
     <Color x:Key="ButtonSecondaryHoverColor">#4a4a4a</Color>
     <Color x:Key="ButtonDangerBackgroundColor">#c72e2e</Color>
     <Color x:Key="ButtonDangerHoverColor">#d94040</Color>
+    <Color x:Key="ButtonSuccessBackgroundColor">#2ea043</Color>
+    <Color x:Key="ButtonSuccessHoverColor">#3fb950</Color>
 
     <!-- Text -->
     <Color x:Key="TextPrimaryColor">#d4d4d4</Color>
@@ -59,6 +61,8 @@
     <SolidColorBrush x:Key="ButtonSecondaryHover"    Color="{StaticResource ButtonSecondaryHoverColor}"/>
     <SolidColorBrush x:Key="ButtonDangerBackground"  Color="{StaticResource ButtonDangerBackgroundColor}"/>
     <SolidColorBrush x:Key="ButtonDangerHover"       Color="{StaticResource ButtonDangerHoverColor}"/>
+    <SolidColorBrush x:Key="ButtonSuccessBackground" Color="{StaticResource ButtonSuccessBackgroundColor}"/>
+    <SolidColorBrush x:Key="ButtonSuccessHover"      Color="{StaticResource ButtonSuccessHoverColor}"/>
     <SolidColorBrush x:Key="TextPrimary"             Color="{StaticResource TextPrimaryColor}"/>
     <SolidColorBrush x:Key="TextSecondary"           Color="{StaticResource TextSecondaryColor}"/>
     <SolidColorBrush x:Key="TextDisabled"            Color="{StaticResource TextDisabledColor}"/>

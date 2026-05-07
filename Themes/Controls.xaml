@@ -114,6 +114,17 @@
         </Style.Triggers>
     </Style>
 
+    <!-- Button — Success -->
+    <Style x:Key="ButtonSuccess" TargetType="Button" BasedOn="{StaticResource ButtonBase}">
+        <Setter Property="Background" Value="{StaticResource ButtonSuccessBackground}"/>
+        <Setter Property="Foreground" Value="#ffffff"/>
+        <Style.Triggers>
+            <Trigger Property="IsMouseOver" Value="True">
+                <Setter Property="Background" Value="{StaticResource ButtonSuccessHover}"/>
+            </Trigger>
+        </Style.Triggers>
+    </Style>
+
     <!-- Button — Danger Outline (fundo transparente, borda e texto vermelhos) -->
     <Style x:Key="ButtonDangerOutline" TargetType="Button" BasedOn="{StaticResource ButtonBase}">
         <Setter Property="Background"       Value="Transparent"/>

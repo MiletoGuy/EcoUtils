@@ -86,7 +86,7 @@
                 Visibility="{Binding BaseEmRestauracao, Converter={StaticResource BoolToVisibility}}">
             <DockPanel>
                 <!-- Botão Cancelar Restauração / spinner de carregamento -->
-                <Grid DockPanel.Dock="Right" Margin="8,0,0,0" VerticalAlignment="Center">
+                <Grid DockPanel.Dock="Right" Margin="8,0,0,0" VerticalAlignment="Top">
                     <Button Content="Cancelar Restauração"
                             Style="{StaticResource ButtonDangerOutline}"
                             Padding="8,4"
@@ -104,11 +104,22 @@
                                    VerticalAlignment="Center"/>
                     </StackPanel>
                 </Grid>
-                <TextBlock Text="Esta base está sendo restaurada em segundo plano. Você pode continuar configurando a instância."
-                           Foreground="{StaticResource TextSecondary}"
-                           FontSize="11"
-                           TextWrapping="Wrap"
-                           VerticalAlignment="Center"/>
+                <StackPanel>
+                    <TextBlock Text="Esta base está sendo restaurada em segundo plano."
+                               Foreground="{StaticResource TextSecondary}"
+                               FontSize="11"
+                               TextWrapping="Wrap"
+                               Margin="0,0,0,6"/>
+                    <ProgressBar IsIndeterminate="True"
+                                 Height="3"
+                                 Margin="0,0,0,4"/>
+                    <TextBlock Text="{Binding MensagemRestauracao}"
+                               Foreground="{StaticResource TextSecondary}"
+                               FontSize="10"
+                               TextWrapping="Wrap"
+                               Height="28"
+                               Opacity="0.7"/>
+                </StackPanel>
             </DockPanel>
         </Border>
 
@@ -177,6 +188,14 @@
                          Maximum="100"
                          Height="4"/>
         </StackPanel>
+
+        <!-- Hint: executável será auto-selecionado após restauração -->
+        <TextBlock Foreground="{StaticResource TextSecondary}"
+                   FontSize="11"
+                   TextWrapping="Wrap"
+                   Margin="0,0,0,4"
+                   Visibility="{Binding AguardandoExeAutoSelecionado, Converter={StaticResource BoolToVisibility}}"
+                   Text="O executável compatível com a maior build disponível será selecionado automaticamente ao término da restauração."/>
 
         <!-- Erro de importação de executável -->
         <TextBlock Text="{Binding ErroImportacaoExe}"

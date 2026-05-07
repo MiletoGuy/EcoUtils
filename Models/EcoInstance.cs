@@ -78,4 +78,12 @@ public class EcoInstance : INotifyPropertyChanged
         get => _erroRestauracao;
         set => SetProperty(ref _erroRestauracao, value);
     }
+
+    /// <summary>
+    /// Preferências de .ini a serem aplicadas ao implantar o executável após a restauração.
+    /// Preenchido apenas quando a instância é confirmada sem executável (banco em restauração).
+    /// Nunca serializado.
+    /// </summary>
+    [JsonIgnore]
+    public IniPreferencias? PreferenciasIniPendente { get; set; }
 }
