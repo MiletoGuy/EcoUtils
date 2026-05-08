@@ -36,4 +36,25 @@ public class DatabaseVersionService : IDatabaseVersionService
             return null;
         }
     }
+
+    public async Task AlterarVersaoAsync(string ecoBankPath, string novaVersao)
+    {
+        var csb = new FbConnectionStringBuilder
+        {
+            DataSource        = EcoPathConstants.EcoServerHost,
+            Database          = ecoBankPath,
+            UserID            = "SYSDBA",
+            Password          = "masterkey",
+            ConnectionTimeout = 5
+        };
+
+        await using var conn = new FbConnection(csb.ToString());
+        await conn.OpenAsync();
+
+        await using var cmd = new FbCommand("UPDATE TGERLICENCA SET VERSAO = @versao", conn);
+        cmd.Parameters.AddWithValue("@versao", novaVersao);
+        await cmd.ExecuteNonQueryAsync();
+
+        _log.Info(nameof(AlterarVersaoAsync), $"TGERLICENCA.VERSAO atualizado para '{novaVersao}' em '{ecoBankPath}'.");
+    }
 }

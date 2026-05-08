@@ -97,6 +97,8 @@ public class InstanceFlyoutViewModel : ViewModelBase
             AtualizarCompatibilidade();
             ConfirmarCommand.RaiseCanExecuteChanged();
             OnPropertyChanged(nameof(AguardandoExeAutoSelecionado));
+            OnPropertyChanged(nameof(PodeUsarVersaoExecutavel));
+            OnPropertyChanged(nameof(PodeAlterarUsarVersaoExecutavel));
         }
     }
 
@@ -315,6 +317,28 @@ public class InstanceFlyoutViewModel : ViewModelBase
         set => SetProperty(ref _multiplasInstancias, value);
     }
 
+    // ── Versão forçada do banco ──────────────────────────────────────
+    private bool _usarVersaoExecutavel;
+    public bool UsarVersaoExecutavel
+    {
+        get => _usarVersaoExecutavel;
+        set => SetProperty(ref _usarVersaoExecutavel, value);
+    }
+
+    public bool PodeUsarVersaoExecutavel =>
+        _versaoBancoRaw is not null &&
+        ExecutavelSelecionado is not null &&
+        !BaseEmRestauracao;
+
+    // Checkbox fica bloqueado enquanto a versão original ainda não foi restaurada
+    public bool PodeAlterarUsarVersaoExecutavel =>
+        PodeUsarVersaoExecutavel && !PodeRestaurarVersaoOriginal;
+
+    public bool PodeRestaurarVersaoOriginal =>
+        _instanciaExistente is not null &&
+        _instanciaExistente.UsarVersaoExecutavel &&
+        !string.IsNullOrEmpty(_instanciaExistente.VersaoBancoOriginal);
+
     private IniPreferencias BuildPreferencias() => new()
     {
         Usuario                  = Usuario.Trim(),
@@ -386,12 +410,13 @@ public class InstanceFlyoutViewModel : ViewModelBase
         !IsImportandoExe                    &&
         (AguardandoExeAutoSelecionado || (ExecutavelSelecionado is not null && EcoIniValido));
 
-    public ICommand CancelarCommand                       { get; }
-    public AsyncRelayCommand ConfirmarCommand             { get; }
-    public AsyncRelayCommand AdicionarBancoCommand        { get; }
-    public AsyncRelayCommand AdicionarExeCommand          { get; }
-    public ICommand ToggleIniExpandedCommand              { get; }
-    public AsyncRelayCommand CancelarRestauracaoFlyoutCommand { get; }
+    public ICommand CancelarCommand                            { get; }
+    public AsyncRelayCommand ConfirmarCommand                  { get; }
+    public AsyncRelayCommand AdicionarBancoCommand             { get; }
+    public AsyncRelayCommand AdicionarExeCommand               { get; }
+    public ICommand ToggleIniExpandedCommand                   { get; }
+    public AsyncRelayCommand CancelarRestauracaoFlyoutCommand   { get; }
+    public AsyncRelayCommand RestaurarVersaoOriginalCommand     { get; }
 
     private bool _isCancellingRestauracao;
     public bool IsCancellingRestauracao
@@ -464,6 +489,10 @@ public class InstanceFlyoutViewModel : ViewModelBase
 
         Executaveis.CollectionChanged += (_, _) => AtualizarVersoesSelecionaveis();
 
+        RestaurarVersaoOriginalCommand = new AsyncRelayCommand(
+            async _ => await RestaurarVersaoOriginalAsync(),
+            _          => PodeRestaurarVersaoOriginal);
+
         _ = CarregarDadosAsync();
     }
 
@@ -512,6 +541,8 @@ public class InstanceFlyoutViewModel : ViewModelBase
                     SincronizaTabelaPreco    = prefs.SincronizaTabelaPreco;
                     MultiplasInstancias      = prefs.MultiplasInstancias;
                 }
+
+                UsarVersaoExecutavel = _instanciaExistente.UsarVersaoExecutavel;
             }
         }
         catch (Exception ex)
@@ -527,6 +558,8 @@ public class InstanceFlyoutViewModel : ViewModelBase
             _versaoBancoRaw   = null;
             StatusBancoVersao = string.Empty;
             AtualizarCompatibilidade();
+            OnPropertyChanged(nameof(PodeUsarVersaoExecutavel));
+            OnPropertyChanged(nameof(PodeAlterarUsarVersaoExecutavel));
             return;
         }
 
@@ -538,6 +571,8 @@ public class InstanceFlyoutViewModel : ViewModelBase
             StatusBancoVersao = "Aguardando conclusão da restauração...";
             _versaoBancoRaw   = null;
             AtualizarCompatibilidade();
+            OnPropertyChanged(nameof(PodeUsarVersaoExecutavel));
+            OnPropertyChanged(nameof(PodeAlterarUsarVersaoExecutavel));
             return;
         }
 
@@ -557,6 +592,8 @@ public class InstanceFlyoutViewModel : ViewModelBase
         }
 
         AtualizarCompatibilidade();
+        OnPropertyChanged(nameof(PodeUsarVersaoExecutavel));
+        OnPropertyChanged(nameof(PodeAlterarUsarVersaoExecutavel));
     }
 
     private void AtualizarCompatibilidade()
@@ -930,6 +967,41 @@ public class InstanceFlyoutViewModel : ViewModelBase
                 iniPath  = string.Empty;
             }
 
+            // ── Versão forçada do banco ──────────────────────────────────────────────
+            string versaoBancoFinal    = _versaoBancoRaw ?? string.Empty;
+            string versaoBancoOriginal = string.Empty;
+
+            if (UsarVersaoExecutavel && ExecutavelSelecionado is not null && !BaseEmRestauracao && _versaoBancoRaw is not null)
+            {
+                var versaoExe = ExtrairVersaoExe(ExecutavelSelecionado.NomeCompleto);
+                if (versaoExe is null)
+                {
+                    ErroConfirmacao = "Não foi possível extrair a versão do executável para alterar o banco.";
+                    return;
+                }
+
+                var novaVersaoDB = ConstruirVersaoDBComExe(_versaoBancoRaw, versaoExe);
+                if (novaVersaoDB is null)
+                {
+                    ErroConfirmacao = "Formato da versão do banco não suportado para alteração.";
+                    return;
+                }
+
+                // Preserva o original somente na primeira vez que o override é ativado
+                versaoBancoOriginal = (!string.IsNullOrEmpty(_instanciaExistente?.VersaoBancoOriginal) && _instanciaExistente.UsarVersaoExecutavel)
+                    ? _instanciaExistente.VersaoBancoOriginal
+                    : _versaoBancoRaw;
+
+                await _databaseVersionService.AlterarVersaoAsync(BancoSelecionado!.EcoPath, novaVersaoDB);
+                versaoBancoFinal = novaVersaoDB;
+                _log.Info(nameof(ConfirmarAsync), $"Versão do banco forçada para '{novaVersaoDB}' (original: '{versaoBancoOriginal}') em '{BancoSelecionado.EcoPath}'.");
+            }
+            else if (!UsarVersaoExecutavel && _instanciaExistente is not null)
+            {
+                // Mantém o original registrado para que o botão de restauração ainda funcione
+                versaoBancoOriginal = _instanciaExistente.VersaoBancoOriginal;
+            }
+
             var instancia = new EcoInstance
             {
                 Id                      = _instanciaExistente?.Id ?? Guid.NewGuid(),
@@ -940,7 +1012,9 @@ public class InstanceFlyoutViewModel : ViewModelBase
                 BasePath                = BancoSelecionado!.EcoPath,
                 BaseNome                = BancoSelecionado.NomeCompleto,
                 IniPath                 = iniPath,
-                VersaoBanco             = _versaoBancoRaw ?? string.Empty,
+                VersaoBanco             = versaoBancoFinal,
+                UsarVersaoExecutavel    = UsarVersaoExecutavel,
+                VersaoBancoOriginal     = versaoBancoOriginal,
                 PreferenciasIniPendente = ExecutavelSelecionado is null ? prefs : null
             };
 
@@ -956,5 +1030,77 @@ public class InstanceFlyoutViewModel : ViewModelBase
         {
             ErroConfirmacao = ex.Message;
         }
+    }
+
+    private async System.Threading.Tasks.Task RestaurarVersaoOriginalAsync()
+    {
+        if (_instanciaExistente is null || string.IsNullOrEmpty(_instanciaExistente.VersaoBancoOriginal)) return;
+
+        bool confirmar = _dialogService.Confirmar(
+            "Restaurar versão original",
+            $"Isso irá reverter a versão do banco para \"{_instanciaExistente.VersaoBancoOriginal}\". Deseja continuar?",
+            "Restaurar");
+
+        if (!confirmar) return;
+
+        try
+        {
+            await _databaseVersionService.AlterarVersaoAsync(
+                _instanciaExistente.BasePath,
+                _instanciaExistente.VersaoBancoOriginal);
+
+            _log.Info(nameof(RestaurarVersaoOriginalAsync),
+                $"Versão original '{_instanciaExistente.VersaoBancoOriginal}' restaurada em '{_instanciaExistente.BasePath}'.");
+
+            var instanciaRestaurada = new EcoInstance
+            {
+                Id                   = _instanciaExistente.Id,
+                Apelido              = _instanciaExistente.Apelido,
+                ExecutavelPath       = _instanciaExistente.ExecutavelPath,
+                ExecutavelFontePath  = _instanciaExistente.ExecutavelFontePath,
+                ExecutavelNome       = _instanciaExistente.ExecutavelNome,
+                BasePath             = _instanciaExistente.BasePath,
+                BaseNome             = _instanciaExistente.BaseNome,
+                IniPath              = _instanciaExistente.IniPath,
+                VersaoBanco          = _instanciaExistente.VersaoBancoOriginal,
+                UsarVersaoExecutavel = false,
+                VersaoBancoOriginal  = string.Empty
+            };
+
+            await _onConfirmado(instanciaRestaurada);
+
+            // Atualiza o estado da instância existente para refletir a restauração
+            // sem fechar o flyout, permitindo que o usuário continue editando.
+            var versaoRestaurada = _instanciaExistente.VersaoBancoOriginal;
+            _instanciaExistente.UsarVersaoExecutavel = false;
+            _instanciaExistente.VersaoBancoOriginal  = string.Empty;
+
+            _versaoBancoRaw          = versaoRestaurada;
+            UsarVersaoExecutavel     = false;
+            var v = ExtrairVersaoBanco(versaoRestaurada);
+            StatusBancoVersao        = v is not null ? $"Versão {v}" : $"Versão: {versaoRestaurada}";
+
+            AtualizarCompatibilidade();
+            OnPropertyChanged(nameof(PodeRestaurarVersaoOriginal));
+            OnPropertyChanged(nameof(PodeUsarVersaoExecutavel));
+            OnPropertyChanged(nameof(PodeAlterarUsarVersaoExecutavel));
+        }
+        catch (Exception ex)
+        {
+            ErroConfirmacao = $"Erro ao restaurar versão original: {ex.Message}";
+        }
+    }
+
+    // "14650000" + "651" → "14651000"  (substitui os dígitos do meio)
+    private static string? ConstruirVersaoDBComExe(string versaoBancoRaw, string versaoExe)
+    {
+        if (versaoBancoRaw.Length > 5 && versaoBancoRaw.All(char.IsDigit))
+        {
+            int midLen = versaoBancoRaw.Length - 5;
+            string prefix = versaoBancoRaw.Substring(0, 2);
+            string suffix = versaoBancoRaw.Substring(versaoBancoRaw.Length - 3);
+            return prefix + versaoExe.PadLeft(midLen, '0') + suffix;
+        }
+        return null;
     }
 }

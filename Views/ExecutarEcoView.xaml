@@ -92,6 +92,9 @@
                                           IsChecked="{Binding DataContext.MostrarBanco, ElementName=Root}"/>
                                 <CheckBox Content="Versão"
                                           IsChecked="{Binding DataContext.MostrarVersao, ElementName=Root}"/>
+                                <CheckBox Content="Versão original"
+                                          Margin="0,6,0,0"
+                                          IsChecked="{Binding DataContext.MostrarVersaoOriginal, ElementName=Root}"/>
                             </StackPanel>
                         </Border>
                     </Popup>
@@ -148,6 +151,7 @@
                         <ColumnDefinition x:Name="HeaderColExecutavel" Width="0"/>
                         <ColumnDefinition x:Name="HeaderColBanco"      Width="0"/>
                         <ColumnDefinition Width="{Binding MostrarVersao, Converter={StaticResource BoolToColumnWidth}, ConverterParameter=80}"/>
+                        <ColumnDefinition Width="{Binding MostrarVersaoOriginal, Converter={StaticResource BoolToColumnWidth}, ConverterParameter=90}"/>
                         <ColumnDefinition Width="100"/>
                     </Grid.ColumnDefinitions>
 
@@ -239,6 +243,28 @@
                         </StackPanel>
                     </Button>
 
+                    <!-- Versão original -->
+                    <Button Grid.Column="5" Style="{StaticResource ColHeader}"
+                            Command="{Binding OrdenarCommand}" CommandParameter="VersaoBancoOriginal">
+                        <StackPanel Orientation="Horizontal">
+                            <TextBlock Text="Versão original"/>
+                            <TextBlock>
+                                <TextBlock.Style>
+                                    <Style TargetType="TextBlock" BasedOn="{StaticResource SortIcon}">
+                                        <Style.Triggers>
+                                            <DataTrigger Binding="{Binding OrdenacaoColuna}" Value="VersaoBancoOriginal">
+                                                <Setter Property="Visibility" Value="Visible"/>
+                                            </DataTrigger>
+                                            <DataTrigger Binding="{Binding OrdenacaoAscendente}" Value="False">
+                                                <Setter Property="Text" Value="&#x25BC;"/>
+                                            </DataTrigger>
+                                        </Style.Triggers>
+                                    </Style>
+                                </TextBlock.Style>
+                            </TextBlock>
+                        </StackPanel>
+                    </Button>
+
                     <!-- Status -->
                     <TextBlock Grid.Column="0" Text="Status"
                                Foreground="{StaticResource TextSecondary}"
@@ -247,7 +273,7 @@
                                TextAlignment="Center"/>
 
                     <!-- Ações -->
-                    <TextBlock Grid.Column="5" Text="Ações"
+                    <TextBlock Grid.Column="6" Text="Ações"
                                Foreground="{StaticResource TextSecondary}"
                                HorizontalAlignment="Center"
                                VerticalAlignment="Center"/>
@@ -281,6 +307,9 @@
                                Fill="{StaticResource PanelBorder}" Opacity="0.5"
                                Visibility="{Binding MostrarVersao, Converter={StaticResource BoolToVisibility}}"/>
                     <Rectangle Grid.Column="5" Width="1" HorizontalAlignment="Left" VerticalAlignment="Stretch"
+                               Fill="{StaticResource PanelBorder}" Opacity="0.5"
+                               Visibility="{Binding MostrarVersaoOriginal, Converter={StaticResource BoolToVisibility}}"/>
+                    <Rectangle Grid.Column="6" Width="1" HorizontalAlignment="Left" VerticalAlignment="Stretch"
                                Fill="{StaticResource PanelBorder}" Opacity="0.5"/>
                 </Grid>
             </Border>
@@ -336,6 +365,7 @@
                                 <ColumnDefinition Width="{Binding DataContext.ColWidthExecutavel, ElementName=Root}"/>
                                 <ColumnDefinition Width="{Binding DataContext.ColWidthBanco,      ElementName=Root}"/>
                                 <ColumnDefinition Width="{Binding DataContext.MostrarVersao, ElementName=Root, Converter={StaticResource BoolToColumnWidth}, ConverterParameter=80}"/>
+                                <ColumnDefinition Width="{Binding DataContext.MostrarVersaoOriginal, ElementName=Root, Converter={StaticResource BoolToColumnWidth}, ConverterParameter=90}"/>
                                 <ColumnDefinition Width="100"/>
                             </Grid.ColumnDefinitions>
 
@@ -355,6 +385,11 @@
                                        VerticalAlignment="Center"/>
                             <TextBlock Grid.Column="4"
                                        Text="{Binding VersaoBanco}"
+                                       Foreground="{StaticResource TextSecondary}"
+                                       HorizontalAlignment="Center"
+                                       VerticalAlignment="Center"/>
+                            <TextBlock Grid.Column="5"
+                                       Text="{Binding VersaoBancoOriginal}"
                                        Foreground="{StaticResource TextSecondary}"
                                        HorizontalAlignment="Center"
                                        VerticalAlignment="Center"/>
@@ -439,9 +474,35 @@
                                         </Style>
                                     </TextBlock.Style>
                                 </TextBlock>
+
+                                <!-- Versão do banco alterada pelo Utils -->
+                                <TextBlock Text="&#x270E;"
+                                           FontSize="12"
+                                           HorizontalAlignment="Center"
+                                           VerticalAlignment="Center"
+                                           Foreground="{StaticResource ButtonPrimaryBackground}"
+                                           ToolTip="Versão do banco foi forçada para corresponder ao executável.">
+                                    <TextBlock.Style>
+                                        <Style TargetType="TextBlock">
+                                            <Setter Property="Visibility" Value="Collapsed"/>
+                                            <Style.Triggers>
+                                                <MultiDataTrigger>
+                                                    <MultiDataTrigger.Conditions>
+                                                        <Condition Binding="{Binding VersaoBancoAlterada}"  Value="True"/>
+                                                        <Condition Binding="{Binding VersaoIncompativel}"   Value="False"/>
+                                                        <Condition Binding="{Binding EstaRestaurando}"      Value="False"/>
+                                                        <Condition Binding="{Binding RestauracaoConcluida}" Value="False"/>
+                                                        <Condition Binding="{Binding RestauracaoFalhou}"    Value="False"/>
+                                                    </MultiDataTrigger.Conditions>
+                                                    <Setter Property="Visibility" Value="Visible"/>
+                                                </MultiDataTrigger>
+                                            </Style.Triggers>
+                                        </Style>
+                                    </TextBlock.Style>
+                                </TextBlock>
                             </Grid>
 
-                            <StackPanel Grid.Column="5"
+                            <StackPanel Grid.Column="6"
                                         Orientation="Horizontal"
                                         HorizontalAlignment="Center"
                                         VerticalAlignment="Center">

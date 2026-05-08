@@ -228,7 +228,7 @@
         <TextBlock Text="{Binding StatusVersao}"
                    FontSize="11"
                    TextWrapping="Wrap"
-                   Margin="0,0,0,24">
+                   Margin="0,0,0,8">
             <TextBlock.Style>
                 <Style TargetType="TextBlock">
                     <Setter Property="Foreground" Value="{StaticResource TextSecondary}"/>
@@ -243,6 +243,22 @@
                 </Style>
             </TextBlock.Style>
         </TextBlock>
+
+        <!-- Usar versão do executável -->
+        <CheckBox Content="Usar versão do executável"
+                  IsChecked="{Binding UsarVersaoExecutavel}"
+                  IsEnabled="{Binding PodeAlterarUsarVersaoExecutavel}"
+                  Foreground="{StaticResource TextPrimary}"
+                  Margin="0,0,0,4"/>
+
+        <!-- Restaurar versão original (somente em modo edição, quando versão foi alterada) -->
+        <Button Content="Restaurar versão original"
+                Style="{StaticResource ButtonDangerOutline}"
+                HorizontalAlignment="Left"
+                Padding="8,4"
+                Margin="0,4,0,16"
+                Command="{Binding RestaurarVersaoOriginalCommand}"
+                Visibility="{Binding PodeRestaurarVersaoOriginal, Converter={StaticResource BoolToVisibility}}"/>
 
         <!-- Configurações do .ini — cabeçalho colapsável -->
         <Button Command="{Binding ToggleIniExpandedCommand}"

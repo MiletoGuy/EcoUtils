@@ -36,6 +36,13 @@ public class EcoInstance : INotifyPropertyChanged
         set => SetProperty(ref _versaoBanco, value);
     }
 
+    // ── Versão forçada do banco ──────────────────────────────────────
+    public bool   UsarVersaoExecutavel { get; set; }
+    public string VersaoBancoOriginal  { get; set; } = string.Empty;
+
+    [JsonIgnore]
+    public bool VersaoBancoAlterada => UsarVersaoExecutavel && !string.IsNullOrEmpty(VersaoBancoOriginal);
+
     // ── Estado de restauração (somente em memória, nunca serializado) ─
     private RestoreJobStatus? _statusRestauracao;
     [JsonIgnore]

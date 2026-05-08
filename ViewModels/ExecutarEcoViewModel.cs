@@ -106,6 +106,13 @@ public class ExecutarEcoViewModel : ViewModelBase
         set => SetProperty(ref _mostrarVersao, value);
     }
 
+    private bool _mostrarVersaoOriginal = false;
+    public bool MostrarVersaoOriginal
+    {
+        get => _mostrarVersaoOriginal;
+        set => SetProperty(ref _mostrarVersaoOriginal, value);
+    }
+
     // ── Larguras de colunas (resizáveis) ─────────────────────
     private GridLength _colWidthApelido = new GridLength(2, GridUnitType.Star);
     public  GridLength  ColWidthApelido
@@ -314,7 +321,12 @@ public class ExecutarEcoViewModel : ViewModelBase
                 _log,
                 async instanciaEditada =>
                 {
-                    var idx = Instancias.IndexOf(instancia);
+                    // Busca por Id para tolerar substituições intermediárias feitas
+                    // durante a sessão de edição (ex.: restauração de versão original).
+                    var idx = -1;
+                    for (int i = 0; i < Instancias.Count; i++)
+                        if (Instancias[i].Id == instanciaEditada.Id) { idx = i; break; }
+
                     if (idx >= 0) Instancias[idx] = instanciaEditada;
                     var job = _restoreJobService.ObterPorDestino(instanciaEditada.BasePath);
                     if (job != null) VincularJobAInstancia(instanciaEditada, job);
