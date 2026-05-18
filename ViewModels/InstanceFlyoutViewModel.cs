@@ -618,9 +618,9 @@ public class InstanceFlyoutViewModel : ViewModelBase
         }
         else
         {
-            var versao = ExtrairVersaoBanco(versaoBancoRaw);
-            StatusBancoVersao = versao is not null
-                ? $"Versão {versao}"
+            var versaoFormatada = EcoVersionHelper.FormatarVersao(versaoBancoRaw);
+            StatusBancoVersao = versaoFormatada is not null
+                ? $"Versão {versaoFormatada}"
                 : $"Versão: {versaoBancoRaw}";
         }
 
@@ -638,10 +638,13 @@ public class InstanceFlyoutViewModel : ViewModelBase
             return;
         }
 
-        var versaoBanco = ExtrairVersaoBanco(_versaoBancoRaw);
-        var versaoExe   = ExtrairVersaoExe(ExecutavelSelecionado.NomeCompleto);
+        var versaoBanco = EcoVersionHelper.ExtrairVersao(_versaoBancoRaw);
+        var majorBanco  = EcoVersionHelper.ExtrairMajor(_versaoBancoRaw);
+        var versaoExe   = EcoVersionHelper.NormalizarVersaoExe(
+                              ExtrairVersaoExe(ExecutavelSelecionado.NomeCompleto) ?? string.Empty,
+                              majorBanco);
 
-        if (versaoBanco is null || versaoExe is null)
+        if (versaoBanco is null || string.IsNullOrEmpty(versaoExe))
         {
             StatusVersao     = $"Formato de versão não reconhecido para comparação.";
             VersaoCompativel = null;
@@ -649,20 +652,18 @@ public class InstanceFlyoutViewModel : ViewModelBase
         }
 
         VersaoCompativel = string.Equals(versaoBanco, versaoExe, StringComparison.Ordinal);
+        var versaoDisplay = EcoVersionHelper.FormatarVersao(_versaoBancoRaw) ?? versaoBanco;
         StatusVersao = VersaoCompativel == true
-            ? $"Versão {versaoExe} — banco e executável compatíveis."
-            : $"Incompatibilidade: banco v{versaoBanco} × executável v{versaoExe}.";
+            ? $"Versão {versaoDisplay} — banco e executável compatíveis."
+            : $"Incompatibilidade: banco v{versaoDisplay} × executável v{versaoExe}.";
     }
 
     // "14650000" → "650"  (ignora os 2 primeiros dígitos do major e os 3 últimos do patch)
     private static string? ExtrairVersaoBanco(string versaoBancoRaw)
-    {
-        if (versaoBancoRaw.Length > 5 && versaoBancoRaw.All(char.IsDigit))
-            return versaoBancoRaw.Substring(2, versaoBancoRaw.Length - 5);
-        return null;
-    }
+        => EcoVersionHelper.ExtrairVersao(versaoBancoRaw);
 
     // "Eco_650_10" → "650"  (primeiro segmento numérico após "Eco_")
+    // "Eco_15001_10" → "15001"  (novo padrão 1.5: o major está embutido no segmento de versão)
     private static string? ExtrairVersaoExe(string nomeCompleto)
     {
         var partes = nomeCompleto.Split('_');
@@ -1144,7 +1145,7 @@ public class InstanceFlyoutViewModel : ViewModelBase
 
             _versaoBancoRaw          = versaoRestaurada;
             UsarVersaoExecutavel     = false;
-            var v = ExtrairVersaoBanco(versaoRestaurada);
+            var v = EcoVersionHelper.FormatarVersao(versaoRestaurada);
             StatusBancoVersao        = v is not null ? $"Versão {v}" : $"Versão: {versaoRestaurada}";
 
             AtualizarCompatibilidade();
@@ -1159,15 +1160,7 @@ public class InstanceFlyoutViewModel : ViewModelBase
     }
 
     // "14650000" + "651" → "14651000"  (substitui os dígitos do meio)
+    // "15001000" + "15002" → "15002000"  (strip do prefixo major embutido no nome do exe)
     private static string? ConstruirVersaoDBComExe(string versaoBancoRaw, string versaoExe)
-    {
-        if (versaoBancoRaw.Length > 5 && versaoBancoRaw.All(char.IsDigit))
-        {
-            int midLen = versaoBancoRaw.Length - 5;
-            string prefix = versaoBancoRaw.Substring(0, 2);
-            string suffix = versaoBancoRaw.Substring(versaoBancoRaw.Length - 3);
-            return prefix + versaoExe.PadLeft(midLen, '0') + suffix;
-        }
-        return null;
-    }
+        => EcoVersionHelper.ConstruirVersaoDBComExe(versaoBancoRaw, versaoExe);
 }
