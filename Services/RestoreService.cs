@@ -14,7 +14,9 @@ public class RestoreService : IRestoreService
         IProgress<DatabaseImportProgress> progresso,
         CancellationToken ct = default)
     {
-        if (!File.Exists(EcoPathConstants.GbakPath))
+        var (gbakPath, workDir) = ResolverGbakDisponivel();
+
+        if (gbakPath is null || workDir is null)
             throw new FileNotFoundException(
                 $"gbak.exe não encontrado em {EcoPathConstants.ToolsDir}. " +
                 "Certifique-se de que a instalação do EcoUtils está completa.");
@@ -35,9 +37,9 @@ public class RestoreService : IRestoreService
 
         var psi = new ProcessStartInfo
         {
-            FileName               = EcoPathConstants.GbakPath,
+            FileName               = gbakPath,
             Arguments              = args.ToString(),
-            WorkingDirectory       = EcoPathConstants.ToolsDir,
+            WorkingDirectory       = workDir,
             RedirectStandardOutput = true,
             RedirectStandardError  = true,
             UseShellExecute        = false,
@@ -100,6 +102,37 @@ public class RestoreService : IRestoreService
                 "Verifique se as credenciais do Firebird estão corretas e se o serviço está ativo." +
                 detalhe);
         }
+    }
+
+    private static (string? GbakPath, string? WorkingDirectory) ResolverGbakDisponivel()
+    {
+        string appDataDir = EcoPathConstants.AppDataDir;
+        string toolsDir = EcoPathConstants.ToolsDir;
+        string tolsDir = Path.Combine(appDataDir, "tols");
+
+        string[] candidatos =
+        [
+            EcoPathConstants.Gbak25Path,
+            Path.Combine(toolsDir, "gbak.exe"),
+            EcoPathConstants.Gbak50Path,
+            Path.Combine(tolsDir, "gbak.exe"),
+            Path.Combine(tolsDir, "gbak25.exe"),
+            Path.Combine(tolsDir, "gbak50.exe")
+        ];
+
+        foreach (var candidato in candidatos)
+        {
+            if (!File.Exists(candidato))
+                continue;
+
+            string? dir = Path.GetDirectoryName(candidato);
+            if (string.IsNullOrWhiteSpace(dir))
+                continue;
+
+            return (candidato, dir);
+        }
+
+        return (null, null);
     }
 
     private static async Task DeletarComRetentativaAsync(string path, int tentativas = 8, int delayMs = 1000)

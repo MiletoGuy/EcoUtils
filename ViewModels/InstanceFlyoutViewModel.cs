@@ -1032,12 +1032,43 @@ public class InstanceFlyoutViewModel : ViewModelBase
         var modoDescricao = _instanciaExistente is null ? "criação" : "edição";
         _log.Info(nameof(ConfirmarAsync), $"Confirmando {modoDescricao} de instância: \"{Apelido.Trim()}\"");
 
+        EcoInstance? instancia = null;
+        bool instanciaPublicada = false;
+
         try
         {
             string exePath;
             string iniPath;
 
             var prefs = BuildPreferencias();
+
+            bool emCriacao = _instanciaExistente is null;
+
+            if (emCriacao)
+            {
+                instancia = new EcoInstance
+                {
+                    Id                      = Guid.NewGuid(),
+                    Apelido                 = Apelido.Trim(),
+                    ExecutavelPath          = string.Empty,
+                    ExecutavelFontePath     = ExecutavelSelecionado?.ExePath ?? string.Empty,
+                    ExecutavelNome          = ExecutavelSelecionado?.NomeCompleto ?? string.Empty,
+                    BasePath                = BancoSelecionado!.EcoPath,
+                    BaseNome                = BancoSelecionado.NomeCompleto,
+                    IniPath                 = string.Empty,
+                    VersaoBanco             = _versaoBancoRaw ?? string.Empty,
+                    UsarVersaoExecutavel    = UsarVersaoExecutavel,
+                    VersaoBancoOriginal     = _instanciaExistente?.VersaoBancoOriginal ?? string.Empty,
+                    VersaoFirebird          = VersaoFirebird,
+                    PreferenciasIniPendente = ExecutavelSelecionado is null ? prefs : null,
+                    CriacaoEmAndamento      = true,
+                    UltimaMensagemRestauracao = "Preparando executável e eco.ini..."
+                };
+
+                await _onConfirmado(instancia);
+                instanciaPublicada = true;
+                _fecharFlyout();
+            }
 
             // ── Resolver porta e DLL conforme versão do Firebird ───────────
             var s = _userSettingsService.Settings;
@@ -1141,23 +1172,27 @@ public class InstanceFlyoutViewModel : ViewModelBase
                 versaoBancoOriginal = _instanciaExistente.VersaoBancoOriginal;
             }
 
-            var instancia = new EcoInstance
+            instancia ??= new EcoInstance
             {
-                Id                      = _instanciaExistente?.Id ?? Guid.NewGuid(),
-                Apelido                 = Apelido.Trim(),
-                ExecutavelPath          = exePath,
-                ExecutavelFontePath     = ExecutavelSelecionado?.ExePath ?? string.Empty,
-                ExecutavelNome          = ExecutavelSelecionado?.NomeCompleto ?? string.Empty,
-                BasePath                = BancoSelecionado!.EcoPath,
-                BaseNome                = BancoSelecionado.NomeCompleto,
-                IniPath                 = iniPath,
-                VersaoBanco             = versaoBancoFinal,
-                UsarVersaoExecutavel    = UsarVersaoExecutavel,
-                VersaoBancoOriginal     = versaoBancoOriginal,
-                VersaoFirebird          = VersaoFirebird,
-                AvisoDllFirebird        = avisoDll,
-                PreferenciasIniPendente = ExecutavelSelecionado is null ? prefs : null
-            };;
+                Id = _instanciaExistente?.Id ?? Guid.NewGuid()
+            };
+
+            instancia.Apelido                 = Apelido.Trim();
+            instancia.ExecutavelPath          = exePath;
+            instancia.ExecutavelFontePath     = ExecutavelSelecionado?.ExePath ?? string.Empty;
+            instancia.ExecutavelNome          = ExecutavelSelecionado?.NomeCompleto ?? string.Empty;
+            instancia.BasePath                = BancoSelecionado!.EcoPath;
+            instancia.BaseNome                = BancoSelecionado.NomeCompleto;
+            instancia.IniPath                 = iniPath;
+            instancia.VersaoBanco             = versaoBancoFinal;
+            instancia.UsarVersaoExecutavel    = UsarVersaoExecutavel;
+            instancia.VersaoBancoOriginal     = versaoBancoOriginal;
+            instancia.VersaoFirebird          = VersaoFirebird;
+            instancia.AvisoDllFirebird        = avisoDll;
+            instancia.PreferenciasIniPendente = ExecutavelSelecionado is null ? prefs : null;
+            instancia.CriacaoEmAndamento      = false;
+            instancia.UltimaMensagemRestauracao = null;
+            instancia.ErroRestauracao         = null;
 
             await _onConfirmado(instancia);
 
@@ -1165,11 +1200,26 @@ public class InstanceFlyoutViewModel : ViewModelBase
                 instancia.StatusRestauracao = RestoreJobStatus.Restaurando;
 
             _log.Info(nameof(ConfirmarAsync), $"Instância \"{instancia.Apelido}\" salva com sucesso. BasePath={instancia.BasePath}");
-            _fecharFlyout();
+            if (!instanciaPublicada)
+                _fecharFlyout();
         }
         catch (Exception ex)
         {
-            ErroConfirmacao = ex.Message;
+            if (instanciaPublicada && instancia is not null)
+            {
+                instancia.CriacaoEmAndamento = false;
+                instancia.StatusRestauracao = RestoreJobStatus.Falhou;
+                instancia.ErroRestauracao = $"Falha ao concluir criação: {ex.Message}";
+                await _onConfirmado(instancia);
+
+                _dialogService.Notificar(
+                    "Falha ao concluir criação",
+                    $"A instância foi adicionada à lista, mas a implantação não foi concluída.\n\n{ex.Message}");
+            }
+            else
+            {
+                ErroConfirmacao = ex.Message;
+            }
         }
     }
 

@@ -285,25 +285,7 @@ public class ExecutarEcoViewModel : ViewModelBase
                 _dialogService,
                 _log,
                 _userSettingsService,
-                async instancia =>
-                {
-                    Instancias.Add(instancia);
-                    var job = _restoreJobService.ObterPorDestino(instancia.BasePath);
-                    if (job != null) VincularJobAInstancia(instancia, job);
-
-                    var vBanco = ExtrairVersaoBancoRaw(instancia.VersaoBanco);
-                    var majorB = EcoVersionHelper.ExtrairMajor(instancia.VersaoBanco);
-                    var vExe   = ExtrairVersaoExeNome(instancia.ExecutavelNome);
-                    var majorE = EcoVersionHelper.ExtrairMajorExe(instancia.ExecutavelNome);
-                    instancia.VersaoIncompativel = vBanco is not null
-                        && majorB is not null
-                        && vExe is not null
-                        && majorE is not null
-                        && (!string.Equals(vBanco, vExe, StringComparison.OrdinalIgnoreCase)
-                            || !string.Equals(majorB, majorE, StringComparison.OrdinalIgnoreCase));
-
-                    await _instanceRepository.SalvarAsync(new List<EcoInstance>(Instancias));
-                },
+                async instancia => await UpsertInstanciaAsync(instancia),
                 () => FlyoutAberto = false,
                 apelidosExistentes);
             FlyoutAberto = true;
@@ -336,32 +318,7 @@ public class ExecutarEcoViewModel : ViewModelBase
                 _dialogService,
                 _log,
                 _userSettingsService,
-                async instanciaEditada =>
-                {
-                    // Busca por Id para tolerar substituições intermediárias feitas
-                    // durante a sessão de edição (ex.: restauração de versão original).
-                    var idx = -1;
-                    for (int i = 0; i < Instancias.Count; i++)
-                        if (Instancias[i].Id == instanciaEditada.Id) { idx = i; break; }
-
-                    if (idx >= 0) Instancias[idx] = instanciaEditada;
-                    var job = _restoreJobService.ObterPorDestino(instanciaEditada.BasePath);
-                    if (job != null) VincularJobAInstancia(instanciaEditada, job);
-
-                    // Recalcula incompatibilidade com base na versão já armazenada
-                    var vBanco = ExtrairVersaoBancoRaw(instanciaEditada.VersaoBanco);
-                    var majorB = EcoVersionHelper.ExtrairMajor(instanciaEditada.VersaoBanco);
-                    var vExe   = ExtrairVersaoExeNome(instanciaEditada.ExecutavelNome);
-                    var majorE = EcoVersionHelper.ExtrairMajorExe(instanciaEditada.ExecutavelNome);
-                    instanciaEditada.VersaoIncompativel = vBanco is not null
-                        && majorB is not null
-                        && vExe is not null
-                        && majorE is not null
-                        && (!string.Equals(vBanco, vExe, StringComparison.OrdinalIgnoreCase)
-                            || !string.Equals(majorB, majorE, StringComparison.OrdinalIgnoreCase));
-
-                    await _instanceRepository.SalvarAsync(new List<EcoInstance>(Instancias));
-                },
+                async instanciaEditada => await UpsertInstanciaAsync(instanciaEditada),
                 () => FlyoutAberto = false,
                 apelidosExistentes,
                 instancia);
@@ -373,6 +330,36 @@ public class ExecutarEcoViewModel : ViewModelBase
             _dialogService.Notificar("Erro ao abrir formulário",
                 $"Não foi possível abrir o formulário de edição.\n\n{ex.Message}");
         }
+    }
+
+    private async Task UpsertInstanciaAsync(EcoInstance instancia)
+    {
+        // Busca por Id para tolerar substituições intermediárias (ex.: criação assíncrona).
+        var idx = -1;
+        for (int i = 0; i < Instancias.Count; i++)
+            if (Instancias[i].Id == instancia.Id) { idx = i; break; }
+
+        if (idx >= 0) Instancias[idx] = instancia;
+        else Instancias.Add(instancia);
+
+        var job = _restoreJobService.ObterPorDestino(instancia.BasePath);
+        if (job != null) VincularJobAInstancia(instancia, job);
+
+        var vBanco = ExtrairVersaoBancoRaw(instancia.VersaoBanco);
+        var majorB = EcoVersionHelper.ExtrairMajor(instancia.VersaoBanco);
+        var vExe   = ExtrairVersaoExeNome(instancia.ExecutavelNome);
+        var majorE = EcoVersionHelper.ExtrairMajorExe(instancia.ExecutavelNome);
+        instancia.VersaoIncompativel = vBanco is not null
+            && majorB is not null
+            && vExe is not null
+            && majorE is not null
+            && (!string.Equals(vBanco, vExe, StringComparison.OrdinalIgnoreCase)
+                || !string.Equals(majorB, majorE, StringComparison.OrdinalIgnoreCase));
+
+        // Estado transitório de criação não deve sobrescrever a persistência final.
+        if (instancia.CriacaoEmAndamento) return;
+
+        await _instanceRepository.SalvarAsync(new List<EcoInstance>(Instancias));
     }
 
     private async Task ExcluirInstanciaAsync(EcoInstance instancia)
@@ -491,9 +478,9 @@ public class ExecutarEcoViewModel : ViewModelBase
 
     private async Task IniciarEcoAsync(EcoInstance instancia)
     {
-        if (instancia.StatusRestauracao == RestoreJobStatus.Restaurando)
+        if (instancia.BloquearExecucao)
         {
-            _log.Warn(nameof(IniciarEcoAsync), $"Tentativa de iniciar instância em restauração: {instancia.Apelido}");
+            _log.Warn(nameof(IniciarEcoAsync), $"Tentativa de iniciar instância bloqueada: {instancia.Apelido}");
             return;
         }
 

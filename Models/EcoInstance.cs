@@ -23,7 +23,16 @@ public class EcoInstance : INotifyPropertyChanged
     // ── Dados persistidos (serializam para instancias.json) ──────────
     public Guid   Id                  { get; set; }
     public string Apelido             { get; set; } = string.Empty;
-    public string ExecutavelPath      { get; set; } = string.Empty;
+    private string _executavelPath = string.Empty;
+    public string ExecutavelPath
+    {
+        get => _executavelPath;
+        set
+        {
+            if (!SetProperty(ref _executavelPath, value)) return;
+            OnPropertyChanged(nameof(BloquearExecucao));
+        }
+    }
     public string ExecutavelFontePath { get; set; } = string.Empty;
     public string ExecutavelNome      { get; set; } = string.Empty;
     public string BasePath            { get; set; } = string.Empty;
@@ -74,6 +83,7 @@ public class EcoInstance : INotifyPropertyChanged
             OnPropertyChanged(nameof(EstaRestaurando));
             OnPropertyChanged(nameof(RestauracaoConcluida));
             OnPropertyChanged(nameof(RestauracaoFalhou));
+            OnPropertyChanged(nameof(BloquearExecucao));
         }
     }
 
@@ -104,6 +114,21 @@ public class EcoInstance : INotifyPropertyChanged
         get => _erroRestauracao;
         set => SetProperty(ref _erroRestauracao, value);
     }
+
+    private bool _criacaoEmAndamento;
+    [JsonIgnore]
+    public bool CriacaoEmAndamento
+    {
+        get => _criacaoEmAndamento;
+        set
+        {
+            if (!SetProperty(ref _criacaoEmAndamento, value)) return;
+            OnPropertyChanged(nameof(BloquearExecucao));
+        }
+    }
+
+    [JsonIgnore]
+    public bool BloquearExecucao => EstaRestaurando || CriacaoEmAndamento || string.IsNullOrWhiteSpace(ExecutavelPath);
 
     /// <summary>
     /// Preferências de .ini a serem aplicadas ao implantar o executável após a restauração.

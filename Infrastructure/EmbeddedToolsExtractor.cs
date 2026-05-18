@@ -11,13 +11,16 @@ namespace EcoUtils.Infrastructure;
 /// </summary>
 public static class EmbeddedToolsExtractor
 {
-    private static readonly (string ResourceName, string FileName)[] Tools =
+    private sealed record ToolEntry(string FileName, params string[] ResourceNames);
+
+    private static readonly ToolEntry[] Tools =
     [
-        ("EcoUtils.Tools.gbak25.exe",   "gbak25.exe"),
-        ("EcoUtils.Tools.gfix25.exe",   "gfix25.exe"),
-        ("EcoUtils.Tools.gbak50.exe",   "gbak50.exe"),
-        ("EcoUtils.Tools.gfix50.exe",   "gfix50.exe"),
-        ("EcoUtils.Tools.fbclient.dll", "fbclient.dll"),
+        // Compatibilidade: aceita recursos novos (25/50) e legado (sem sufixo).
+        new("gbak25.exe", "EcoUtils.Tools.gbak25.exe", "EcoUtils.Tools.gbak.exe"),
+        new("gfix25.exe", "EcoUtils.Tools.gfix25.exe", "EcoUtils.Tools.gfix.exe"),
+        new("gbak50.exe", "EcoUtils.Tools.gbak50.exe"),
+        new("gfix50.exe", "EcoUtils.Tools.gfix50.exe"),
+        new("fbclient.dll", "EcoUtils.Tools.fbclient.dll"),
     ];
 
     /// <summary>
@@ -35,21 +38,59 @@ public static class EmbeddedToolsExtractor
 
         var assembly = Assembly.GetExecutingAssembly();
 
-        foreach (var (resourceName, fileName) in Tools)
+        foreach (var tool in Tools)
         {
-            using var stream = assembly.GetManifestResourceStream(resourceName);
+            var stream = TryOpenResource(assembly, tool.ResourceNames);
             if (stream is null) continue;
 
-            var destPath = Path.Combine(toolsDir, fileName);
+            using (stream)
+            {
+                var destPath = Path.Combine(toolsDir, tool.FileName);
 
-            if (File.Exists(destPath) && HashesIguais(stream, destPath))
-                continue;
+                if (File.Exists(destPath) && HashesIguais(stream, destPath))
+                    continue;
 
-            progress?.Report(fileName);
+                progress?.Report(tool.FileName);
 
-            stream.Position = 0;
-            using var fileStream = new FileStream(destPath, FileMode.Create, FileAccess.Write, FileShare.None);
-            stream.CopyTo(fileStream);
+                stream.Position = 0;
+                using var fileStream = new FileStream(destPath, FileMode.Create, FileAccess.Write, FileShare.None);
+                stream.CopyTo(fileStream);
+            }
+        }
+
+        // Compatibilidade com publicações antigas: cria aliases quando só o executável
+        // legado existir no AppData (gbak.exe/gfix.exe).
+        GarantirAliasLegado(toolsDir, "gbak.exe", "gbak25.exe");
+        GarantirAliasLegado(toolsDir, "gfix.exe", "gfix25.exe");
+    }
+
+    private static Stream? TryOpenResource(Assembly assembly, params string[] resourceNames)
+    {
+        foreach (var resourceName in resourceNames)
+        {
+            var stream = assembly.GetManifestResourceStream(resourceName);
+            if (stream is not null)
+                return stream;
+        }
+
+        return null;
+    }
+
+    private static void GarantirAliasLegado(string toolsDir, string origem, string destino)
+    {
+        var srcPath = Path.Combine(toolsDir, origem);
+        var dstPath = Path.Combine(toolsDir, destino);
+
+        if (!File.Exists(srcPath) || File.Exists(dstPath))
+            return;
+
+        try
+        {
+            File.Copy(srcPath, dstPath);
+        }
+        catch
+        {
+            // Melhor esforço: se não conseguir copiar, o RestoreService ainda tenta o legado.
         }
     }
 

@@ -333,7 +333,7 @@
                                         <MenuItem.Style>
                                             <Style TargetType="MenuItem" BasedOn="{StaticResource {x:Type MenuItem}}">
                                                 <Style.Triggers>
-                                                    <DataTrigger Binding="{Binding PlacementTarget.DataContext.EstaRestaurando, RelativeSource={RelativeSource AncestorType=ContextMenu}}" Value="True">
+                                                    <DataTrigger Binding="{Binding PlacementTarget.DataContext.BloquearExecucao, RelativeSource={RelativeSource AncestorType=ContextMenu}}" Value="True">
                                                         <Setter Property="IsEnabled" Value="False"/>
                                                     </DataTrigger>
                                                 </Style.Triggers>
@@ -399,6 +399,35 @@
                                   Width="40"
                                   HorizontalAlignment="Center"
                                   VerticalAlignment="Center">
+
+                                <!-- Criando instância: spinner animado -->
+                                <Ellipse Width="16" Height="16"
+                                         HorizontalAlignment="Center"
+                                         VerticalAlignment="Center"
+                                         Stroke="{StaticResource TextSecondary}"
+                                         StrokeThickness="2"
+                                         StrokeDashArray="10 5"
+                                         RenderTransformOrigin="0.5,0.5"
+                                         Visibility="{Binding CriacaoEmAndamento, Converter={StaticResource BoolToVisibility}}">
+                                    <Ellipse.RenderTransform>
+                                        <RotateTransform/>
+                                    </Ellipse.RenderTransform>
+                                    <Ellipse.Triggers>
+                                        <EventTrigger RoutedEvent="Loaded">
+                                            <BeginStoryboard>
+                                                <Storyboard RepeatBehavior="Forever">
+                                                    <DoubleAnimation
+                                                        Storyboard.TargetProperty="RenderTransform.Angle"
+                                                        From="0" To="360"
+                                                        Duration="0:0:1"/>
+                                                </Storyboard>
+                                            </BeginStoryboard>
+                                        </EventTrigger>
+                                    </Ellipse.Triggers>
+                                    <Ellipse.ToolTip>
+                                        <ToolTip Content="{Binding UltimaMensagemRestauracao}"/>
+                                    </Ellipse.ToolTip>
+                                </Ellipse>
 
                                 <!-- Restaurando: spinner animado -->
                                 <Ellipse Width="16" Height="16"
@@ -538,9 +567,9 @@
                                     <Button.Style>
                                         <Style TargetType="Button" BasedOn="{StaticResource ButtonIcon}">
                                             <Style.Triggers>
-                                                <DataTrigger Binding="{Binding EstaRestaurando}" Value="True">
+                                                <DataTrigger Binding="{Binding BloquearExecucao}" Value="True">
                                                     <Setter Property="IsEnabled" Value="False"/>
-                                                    <Setter Property="ToolTip" Value="Aguardando restauração da base..."/>
+                                                    <Setter Property="ToolTip" Value="Aguarde a finalização da preparação da instância."/>
                                                 </DataTrigger>
                                             </Style.Triggers>
                                         </Style>
