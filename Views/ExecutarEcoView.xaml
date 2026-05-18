@@ -500,6 +500,31 @@
                                         </Style>
                                     </TextBlock.Style>
                                 </TextBlock>
+
+                                <!-- DLL do Firebird não encontrada -->
+                                <TextBlock Text="&#x26A0;"
+                                           FontSize="13"
+                                           HorizontalAlignment="Center"
+                                           VerticalAlignment="Center"
+                                           Foreground="{StaticResource StatusWarning}"
+                                           ToolTip="DLL do Firebird não encontrada ao criar/editar esta instância. Verifique o caminho nas Configurações.">
+                                    <TextBlock.Style>
+                                        <Style TargetType="TextBlock">
+                                            <Setter Property="Visibility" Value="Collapsed"/>
+                                            <Style.Triggers>
+                                                <MultiDataTrigger>
+                                                    <MultiDataTrigger.Conditions>
+                                                        <Condition Binding="{Binding AvisoDllFirebird}"     Value="True"/>
+                                                        <Condition Binding="{Binding EstaRestaurando}"      Value="False"/>
+                                                        <Condition Binding="{Binding RestauracaoConcluida}" Value="False"/>
+                                                        <Condition Binding="{Binding RestauracaoFalhou}"    Value="False"/>
+                                                    </MultiDataTrigger.Conditions>
+                                                    <Setter Property="Visibility" Value="Visible"/>
+                                                </MultiDataTrigger>
+                                            </Style.Triggers>
+                                        </Style>
+                                    </TextBlock.Style>
+                                </TextBlock>
                             </Grid>
 
                             <StackPanel Grid.Column="6"

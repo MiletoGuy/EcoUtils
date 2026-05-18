@@ -2,18 +2,27 @@ using EcoUtils.Models;
 
 namespace EcoUtils.Services.Interfaces;
 
+/// <summary>
+/// Opções de implantação/atualização de um .ini de instância ECO.
+/// </summary>
+public record ImplantarOpcoes(
+    IniPreferencias? Preferencias,
+    string           VersaoFirebird,
+    string           PortaFirebird,
+    string           DllFirebirdPath);
+
 public interface IInstanceSetupService
 {
     /// <summary>
     /// Copia o executável fonte para WindowsDir e gera o .ini correspondente,
-    /// aplicando os parâmetros de <paramref name="preferencias"/> na seção [PREFERENCIAS].
+    /// aplicando as opções de Firebird e os parâmetros de [PREFERENCIAS].
     /// O número sequencial do par de arquivos é determinado internamente com base
     /// nos arquivos já existentes em WindowsDir.
     /// </summary>
     Task<(string ExePath, string IniPath)> ImplantarAsync(
-        string exeFontePath,
-        string basePath,
-        IniPreferencias preferencias);
+        string          exeFontePath,
+        string          basePath,
+        ImplantarOpcoes opcoes);
 
     /// <summary>
     /// Remove os arquivos .exe e .ini de uma instância implantada.
@@ -27,14 +36,19 @@ public interface IInstanceSetupService
     Task<bool> ValidarEcoIniAsync();
 
     /// <summary>
-    /// Lê os parâmetros da seção [PREFERENCIAS] de um .ini já implantado.
-    /// Chaves ausentes assumem N / string vazia.
+    /// Lê os parâmetros da seção [PREFERENCIAS] e FirebirdVersao= de [Eco] de um .ini implantado.
+    /// Chaves ausentes assumem N / "2.5" / string vazia.
     /// </summary>
     Task<IniPreferencias> LerPreferenciasAsync(string iniPath);
 
     /// <summary>
-    /// Reescreve os parâmetros da seção [PREFERENCIAS] de um .ini já implantado
-    /// sem alterar nenhuma outra seção.
+    /// Atualiza cirurgicamente [preferencias], [Eco] e dados= em [windows] de um .ini implantado.
     /// </summary>
-    Task AtualizarPreferenciasAsync(string iniPath, IniPreferencias preferencias);
+    Task AtualizarPreferenciasAsync(string iniPath, ImplantarOpcoes opcoes);
+
+    /// <summary>
+    /// Atualiza cirurgicamente apenas [Eco] e dados= em [windows].
+    /// Usado na propagação de mudança de porta a partir das Configurações.
+    /// </summary>
+    Task AtualizarSecoesFbAsync(string iniPath, ImplantarOpcoes opcoes);
 }

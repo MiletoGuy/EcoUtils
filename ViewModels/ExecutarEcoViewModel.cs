@@ -29,6 +29,7 @@ public class ExecutarEcoViewModel : ViewModelBase
     private readonly ILaunchService            _launchService;
     private readonly IDialogService            _dialogService;
     private readonly ILogService               _log;
+    private readonly IUserSettingsService      _userSettingsService;
 
     public ObservableCollection<EcoInstance> Instancias { get; }
 
@@ -182,7 +183,8 @@ public class ExecutarEcoViewModel : ViewModelBase
         IFileLockerService fileLockerService,
         ILaunchService launchService,
         IDialogService dialogService,
-        ILogService log)
+        ILogService log,
+        IUserSettingsService userSettingsService)
     {
         _instanceRepository       = instanceRepository;
         _versionCatalogService    = versionCatalogService;
@@ -196,6 +198,7 @@ public class ExecutarEcoViewModel : ViewModelBase
         _launchService            = launchService;
         _dialogService            = dialogService;
         _log                      = log;
+        _userSettingsService      = userSettingsService;
 
         Instancias = new ObservableCollection<EcoInstance>();
         Instancias.CollectionChanged += (_, _) => OnPropertyChanged(nameof(ListaVazia));
@@ -275,6 +278,7 @@ public class ExecutarEcoViewModel : ViewModelBase
                 _fileLockerService,
                 _dialogService,
                 _log,
+                _userSettingsService,
                 async instancia =>
                 {
                     Instancias.Add(instancia);
@@ -319,6 +323,7 @@ public class ExecutarEcoViewModel : ViewModelBase
                 _fileLockerService,
                 _dialogService,
                 _log,
+                _userSettingsService,
                 async instanciaEditada =>
                 {
                     // Busca por Id para tolerar substituições intermediárias feitas
@@ -515,8 +520,15 @@ public class ExecutarEcoViewModel : ViewModelBase
 
         try
         {
-            var prefs = inst.PreferenciasIniPendente ?? new IniPreferencias();
-            var (exePath, iniPath) = await _instanceSetupService.ImplantarAsync(melhorExe.ExePath, inst.BasePath, prefs);
+            var prefs  = inst.PreferenciasIniPendente ?? new IniPreferencias();
+            bool eFb25 = string.Equals(inst.VersaoFirebird, "2.5", StringComparison.Ordinal);
+            var s      = _userSettingsService.Settings;
+            var opcoes = new ImplantarOpcoes(
+                prefs,
+                inst.VersaoFirebird,
+                eFb25 ? s.PortaFirebird25   : s.PortaFirebird50,
+                eFb25 ? s.DllFirebird25Path : s.DllFirebird50Path);
+            var (exePath, iniPath) = await _instanceSetupService.ImplantarAsync(melhorExe.ExePath, inst.BasePath, opcoes);
 
             inst.ExecutavelPath          = exePath;
             inst.ExecutavelFontePath     = melhorExe.ExePath;

@@ -6,6 +6,7 @@ using System.Linq;
 using System.Threading.Tasks;
 using System.Windows.Input;
 using EcoUtils.Commands;
+using EcoUtils.Infrastructure;
 using EcoUtils.Services;
 using EcoUtils.Services.Interfaces;
 using Microsoft.Win32;
@@ -27,10 +28,13 @@ public class PatchnotePatch
 
 public class ConfiguracoesViewModel : ViewModelBase
 {
-    private readonly IUserSettingsService _userSettingsService;
-    private readonly IUpdateService       _updateService;
-    private readonly IDialogService       _dialogService;
-    private readonly Action               _fechar;
+    private readonly IUserSettingsService  _userSettingsService;
+    private readonly IUpdateService        _updateService;
+    private readonly IDialogService        _dialogService;
+    private readonly IInstanceRepository   _instanceRepository;
+    private readonly IInstanceSetupService _instanceSetupService;
+    private readonly ILogService           _log;
+    private readonly Action                _fechar;
 
     // ── Navegação interna ────────────────────────────────────────
     private AbaConfiguracoes _abaAtiva = AbaConfiguracoes.Geral;
@@ -58,7 +62,34 @@ public class ConfiguracoesViewModel : ViewModelBase
         get => _ibExpertPath;
         set => SetProperty(ref _ibExpertPath, value);
     }
+    // ── Firebird ─────────────────────────────────────────
+    private string _portaFirebird25 = string.Empty;
+    public string PortaFirebird25
+    {
+        get => _portaFirebird25;
+        set => SetProperty(ref _portaFirebird25, value);
+    }
 
+    private string _portaFirebird50 = string.Empty;
+    public string PortaFirebird50
+    {
+        get => _portaFirebird50;
+        set => SetProperty(ref _portaFirebird50, value);
+    }
+
+    private string _dllFirebird25Path = string.Empty;
+    public string DllFirebird25Path
+    {
+        get => _dllFirebird25Path;
+        set => SetProperty(ref _dllFirebird25Path, value);
+    }
+
+    private string _dllFirebird50Path = string.Empty;
+    public string DllFirebird50Path
+    {
+        get => _dllFirebird50Path;
+        set => SetProperty(ref _dllFirebird50Path, value);
+    }
     // ── Versão do Utils ─────────────────────────────────────────
     public string VersaoAtual => _updateService.VersaoAtual;
 
@@ -114,35 +145,42 @@ public class ConfiguracoesViewModel : ViewModelBase
 
     public bool TemErroVersoes => !string.IsNullOrEmpty(ErroVersoes);
 
-    public ICommand SalvarCommand         { get; }
-    public ICommand CancelarCommand       { get; }
-    public ICommand BrowseIbExpertCommand { get; }
+    public ICommand SalvarCommand               { get; }
+    public ICommand CancelarCommand             { get; }
+    public ICommand BrowseIbExpertCommand       { get; }
+    public ICommand BrowseFirebird25DllCommand  { get; }
+    public ICommand BrowseFirebird50DllCommand  { get; }
     public AsyncRelayCommand TrocarVersaoCommand { get; }
 
     // ── Patchnotes ───────────────────────────────────────────────
     public IReadOnlyList<PatchnotePatch> Patches { get; }
 
     public ConfiguracoesViewModel(
-        IUserSettingsService userSettingsService,
-        IUpdateService updateService,
-        IDialogService dialogService,
-        Action fechar)
+        IUserSettingsService  userSettingsService,
+        IUpdateService        updateService,
+        IDialogService        dialogService,
+        IInstanceRepository   instanceRepository,
+        IInstanceSetupService instanceSetupService,
+        ILogService           log,
+        Action                fechar)
     {
-        _userSettingsService = userSettingsService;
-        _updateService       = updateService;
-        _dialogService       = dialogService;
-        _fechar              = fechar;
-        _ibExpertPath        = userSettingsService.Settings.IbExpertPath;
+        _userSettingsService  = userSettingsService;
+        _updateService        = updateService;
+        _dialogService        = dialogService;
+        _instanceRepository   = instanceRepository;
+        _instanceSetupService = instanceSetupService;
+        _log                  = log;
+        _fechar               = fechar;
+        _ibExpertPath         = userSettingsService.Settings.IbExpertPath;
+        _portaFirebird25      = userSettingsService.Settings.PortaFirebird25;
+        _portaFirebird50      = userSettingsService.Settings.PortaFirebird50;
+        _dllFirebird25Path    = userSettingsService.Settings.DllFirebird25Path;
+        _dllFirebird50Path    = userSettingsService.Settings.DllFirebird50Path;
 
         NavGeralCommand      = new RelayCommand(_ => AbaAtiva = AbaConfiguracoes.Geral);
         NavPatchnotesCommand = new RelayCommand(_ => AbaAtiva = AbaConfiguracoes.Patchnotes);
 
-        SalvarCommand = new AsyncRelayCommand(async _ =>
-        {
-            _userSettingsService.Settings.IbExpertPath = IbExpertPath.Trim();
-            await _userSettingsService.SalvarAsync();
-            _fechar();
-        });
+        SalvarCommand = new AsyncRelayCommand(async _ => await SalvarAsync());
 
         CancelarCommand = new RelayCommand(_ => _fechar());
 
@@ -163,6 +201,18 @@ public class ConfiguracoesViewModel : ViewModelBase
                 IbExpertPath = dlg.FileName;
         });
 
+        BrowseFirebird25DllCommand = new RelayCommand(_ =>
+        {
+            var caminho = BrowseDll(DllFirebird25Path);
+            if (caminho is not null) DllFirebird25Path = caminho;
+        });
+
+        BrowseFirebird50DllCommand = new RelayCommand(_ =>
+        {
+            var caminho = BrowseDll(DllFirebird50Path);
+            if (caminho is not null) DllFirebird50Path = caminho;
+        });
+
         TrocarVersaoCommand = new AsyncRelayCommand(
             async _ => await TrocarVersaoAsync(),
             _ => VersaoSelecionada is not null
@@ -176,9 +226,96 @@ public class ConfiguracoesViewModel : ViewModelBase
     /// <summary>Sincroniza os campos com os valores atuais salvos (ao abrir o painel).</summary>
     public void Resetar()
     {
-        IbExpertPath = _userSettingsService.Settings.IbExpertPath;
-        AbaAtiva     = AbaConfiguracoes.Geral;
+        var s = _userSettingsService.Settings;
+        IbExpertPath      = s.IbExpertPath;
+        PortaFirebird25   = s.PortaFirebird25;
+        PortaFirebird50   = s.PortaFirebird50;
+        DllFirebird25Path = string.IsNullOrEmpty(s.DllFirebird25Path) && File.Exists(EcoPathConstants.Firebird25DllPadrao)
+            ? EcoPathConstants.Firebird25DllPadrao
+            : s.DllFirebird25Path;
+        DllFirebird50Path = string.IsNullOrEmpty(s.DllFirebird50Path) && File.Exists(EcoPathConstants.Firebird50DllPadrao)
+            ? EcoPathConstants.Firebird50DllPadrao
+            : s.DllFirebird50Path;
+        AbaAtiva = AbaConfiguracoes.Geral;
         _ = CarregarVersoesAsync();
+    }
+
+    private async Task SalvarAsync()
+    {
+        var s = _userSettingsService.Settings;
+        var portaAntiga25 = s.PortaFirebird25;
+        var portaAntiga50 = s.PortaFirebird50;
+
+        s.IbExpertPath      = IbExpertPath.Trim();
+        s.PortaFirebird25   = PortaFirebird25.Trim();
+        s.PortaFirebird50   = PortaFirebird50.Trim();
+        s.DllFirebird25Path = DllFirebird25Path.Trim();
+        s.DllFirebird50Path = DllFirebird50Path.Trim();
+        await _userSettingsService.SalvarAsync();
+
+        // Propaga mudança de porta para todos os .ini existentes da versão afetada
+        bool portaMudou25 = !string.Equals(portaAntiga25, s.PortaFirebird25, StringComparison.Ordinal);
+        bool portaMudou50 = !string.Equals(portaAntiga50, s.PortaFirebird50, StringComparison.Ordinal);
+
+        if (portaMudou25 || portaMudou50)
+            await PropagarPortasAsync(portaMudou25, portaMudou50, s);
+
+        _fechar();
+    }
+
+    private async Task PropagarPortasAsync(bool fb25, bool fb50, Models.UserSettings s)
+    {
+        IReadOnlyList<Models.EcoInstance> instancias;
+        try
+        {
+            instancias = await _instanceRepository.CarregarAsync();
+        }
+        catch (Exception ex)
+        {
+            _log.Error(nameof(PropagarPortasAsync), ex);
+            return;
+        }
+
+        foreach (var inst in instancias)
+        {
+            if (string.IsNullOrEmpty(inst.IniPath) || !File.Exists(inst.IniPath))
+                continue;
+
+            bool ehFb25 = string.Equals(inst.VersaoFirebird, "2.5", StringComparison.Ordinal);
+            bool ehFb50 = string.Equals(inst.VersaoFirebird, "5.0", StringComparison.Ordinal);
+
+            if ((fb25 && ehFb25) || (fb50 && ehFb50))
+            {
+                var porta = ehFb25 ? s.PortaFirebird25 : s.PortaFirebird50;
+                var dll   = ehFb25 ? s.DllFirebird25Path : s.DllFirebird50Path;
+                var opcoes = new ImplantarOpcoes(null, inst.VersaoFirebird, porta, dll);
+                try
+                {
+                    await _instanceSetupService.AtualizarSecoesFbAsync(inst.IniPath, opcoes);
+                }
+                catch (Exception ex)
+                {
+                    _log.Error(nameof(PropagarPortasAsync),
+                        new Exception($"Falha ao atualizar .ini de '{inst.Apelido}': {ex.Message}", ex));
+                }
+            }
+        }
+    }
+
+    private static string? BrowseDll(string caminhoAtual)
+    {
+        var dlg = new OpenFileDialog
+        {
+            Title  = "Localizar fbclient.dll",
+            Filter = "fbclient.dll|fbclient.dll|Bibliotecas (*.dll)|*.dll",
+        };
+
+        if (File.Exists(caminhoAtual))
+            dlg.InitialDirectory = Path.GetDirectoryName(caminhoAtual);
+        else if (!string.IsNullOrEmpty(caminhoAtual) && Directory.Exists(Path.GetDirectoryName(caminhoAtual)))
+            dlg.InitialDirectory = Path.GetDirectoryName(caminhoAtual);
+
+        return dlg.ShowDialog() == true ? dlg.FileName : null;
     }
 
     private async Task CarregarVersoesAsync()

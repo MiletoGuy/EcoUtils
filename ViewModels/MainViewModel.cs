@@ -73,11 +73,11 @@ public class MainViewModel : ViewModelBase
     public ICommand DepoisCommand          { get; }
     public ICommand AbrirFlyoutUpdateCommand { get; }
 
-    public MainViewModel(ExecutarEcoViewModel executarEcoVm, IUserSettingsService userSettingsService, IUpdateService updateService, IDialogService dialogService)
+    public MainViewModel(ExecutarEcoViewModel executarEcoVm, IUserSettingsService userSettingsService, IUpdateService updateService, IDialogService dialogService, IInstanceRepository instanceRepository, IInstanceSetupService instanceSetupService, ILogService log)
     {
         _updateService = updateService;
 
-        ConfiguracoesVM  = new ConfiguracoesViewModel(userSettingsService, updateService, dialogService, () => ConfigAberto = false);
+        ConfiguracoesVM  = new ConfiguracoesViewModel(userSettingsService, updateService, dialogService, instanceRepository, instanceSetupService, log, () => ConfigAberto = false);
         AbrirConfigCommand = new RelayCommand(_ =>
         {
             ConfiguracoesVM.Resetar();

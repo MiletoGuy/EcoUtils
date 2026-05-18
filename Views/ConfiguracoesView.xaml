@@ -113,6 +113,64 @@
                                         Command="{Binding BrowseIbExpertCommand}"/>
                             </Grid>
 
+                            <!-- ── Firebird ── -->
+                            <TextBlock Text="Firebird"
+                                       Foreground="{StaticResource TextSecondary}"
+                                       FontWeight="SemiBold"
+                                       Margin="0,20,0,8"/>
+
+                            <TextBlock Text="Porta Firebird 2.5"
+                                       Foreground="{StaticResource TextSecondary}"
+                                       Margin="0,0,0,4"/>
+                            <TextBox Text="{Binding PortaFirebird25, UpdateSourceTrigger=PropertyChanged}"
+                                     Margin="0,0,0,10"
+                                     Width="120"
+                                     HorizontalAlignment="Left"/>
+
+                            <TextBlock Text="Porta Firebird 5.0"
+                                       Foreground="{StaticResource TextSecondary}"
+                                       Margin="0,0,0,4"/>
+                            <TextBox Text="{Binding PortaFirebird50, UpdateSourceTrigger=PropertyChanged}"
+                                     Margin="0,0,0,10"
+                                     Width="120"
+                                     HorizontalAlignment="Left"/>
+
+                            <TextBlock Text="fbclient.dll — Firebird 2.5"
+                                       Foreground="{StaticResource TextSecondary}"
+                                       Margin="0,0,0,4"/>
+                            <Grid Margin="0,0,0,10">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*"/>
+                                    <ColumnDefinition Width="Auto"/>
+                                </Grid.ColumnDefinitions>
+                                <TextBox Grid.Column="0"
+                                         Text="{Binding DllFirebird25Path, UpdateSourceTrigger=PropertyChanged}"
+                                         Margin="0,0,6,0"/>
+                                <Button Grid.Column="1"
+                                        Content="..."
+                                        Style="{StaticResource ButtonSecondary}"
+                                        Padding="10,0"
+                                        Command="{Binding BrowseFirebird25DllCommand}"/>
+                            </Grid>
+
+                            <TextBlock Text="fbclient.dll — Firebird 5.0"
+                                       Foreground="{StaticResource TextSecondary}"
+                                       Margin="0,0,0,4"/>
+                            <Grid Margin="0,0,0,10">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*"/>
+                                    <ColumnDefinition Width="Auto"/>
+                                </Grid.ColumnDefinitions>
+                                <TextBox Grid.Column="0"
+                                         Text="{Binding DllFirebird50Path, UpdateSourceTrigger=PropertyChanged}"
+                                         Margin="0,0,6,0"/>
+                                <Button Grid.Column="1"
+                                        Content="..."
+                                        Style="{StaticResource ButtonSecondary}"
+                                        Padding="10,0"
+                                        Command="{Binding BrowseFirebird50DllCommand}"/>
+                            </Grid>
+
                             <!-- ── Versão do Utils ── -->
                             <TextBlock Text="Versão do Utils"
                                        Foreground="{StaticResource TextSecondary}"

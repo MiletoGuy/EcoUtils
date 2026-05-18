@@ -40,6 +40,10 @@ public class EcoInstance : INotifyPropertyChanged
     public bool   UsarVersaoExecutavel { get; set; }
     public string VersaoBancoOriginal  { get; set; } = string.Empty;
 
+    // ── Firebird ─────────────────────────────────────────────────────
+    public string VersaoFirebird    { get; set; } = "2.5";
+    public bool   AvisoDllFirebird  { get; set; } = false;
+
     [JsonIgnore]
     public bool VersaoBancoAlterada => UsarVersaoExecutavel && !string.IsNullOrEmpty(VersaoBancoOriginal);
 

@@ -53,9 +53,21 @@ public class DatabaseImportService : IDatabaseImportService
             int total = Math.Max(entries.Count, 1);
             int done  = 0;
 
+            // Normaliza o destino uma vez para reutilizar na validação de cada entrada
+            string raizNormalizada = Path.GetFullPath(tempDir);
+            if (!raizNormalizada.EndsWith(Path.DirectorySeparatorChar))
+                raizNormalizada += Path.DirectorySeparatorChar;
+
             foreach (var entry in entries)
             {
                 ct.ThrowIfCancellationRequested();
+
+                // Defesa contra path traversal (CVE-2026-44788 / GHSA-6c8g-7p36-r338):
+                // rejeita entradas cujo caminho resolvido escaparia do diretório de destino.
+                string chave = entry.Key ?? string.Empty;
+                string caminhoResolvido = Path.GetFullPath(Path.Combine(raizNormalizada, chave));
+                if (!caminhoResolvido.StartsWith(raizNormalizada, StringComparison.OrdinalIgnoreCase))
+                    continue;
 
                 string nome = string.IsNullOrEmpty(entry.Key) ? "arquivo" : entry.Key;
                 progresso.Report(new DatabaseImportProgress(

@@ -12,4 +12,8 @@ public class IniPreferencias
     public bool   MonitorarTempoSelects    { get; set; } = false;
     public bool   SincronizaTabelaPreco    { get; set; } = false;
     public bool   MultiplasInstancias      { get; set; } = true;
+    /// <summary>Chave Firebird= em [preferencias]. Caminho da fbclient.dll.</summary>
+    public string FirebirdDllPath          { get; set; } = string.Empty;
+    /// <summary>Populado por LerPreferenciasAsync ao ler FirebirdVersao= de [Eco]. Não escrito por AplicarPreferencias.</summary>
+    public string VersaoFirebird           { get; set; } = "2.5";
 }

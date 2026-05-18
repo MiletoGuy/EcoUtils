@@ -21,6 +21,7 @@ public class InstanceFlyoutViewModel : ViewModelBase
     private readonly IFileLockerService           _fileLockerService;
     private readonly IDialogService               _dialogService;
     private readonly ILogService                  _log;
+    private readonly IUserSettingsService         _userSettingsService;
     private readonly Func<EcoInstance, Task>      _onConfirmado;
     private readonly Action                       _fecharFlyout;
     private readonly EcoInstance?                 _instanciaExistente;
@@ -339,6 +340,31 @@ public class InstanceFlyoutViewModel : ViewModelBase
         _instanciaExistente.UsarVersaoExecutavel &&
         !string.IsNullOrEmpty(_instanciaExistente.VersaoBancoOriginal);
 
+    // ── Versão do Firebird ─────────────────────────────────
+    private string _versaoFirebird = "2.5";
+    public string VersaoFirebird
+    {
+        get => _versaoFirebird;
+        set
+        {
+            if (!SetProperty(ref _versaoFirebird, value)) return;
+            OnPropertyChanged(nameof(VersaoFirebird25));
+            OnPropertyChanged(nameof(VersaoFirebird50));
+        }
+    }
+
+    public bool VersaoFirebird25
+    {
+        get => _versaoFirebird == "2.5";
+        set { if (value) VersaoFirebird = "2.5"; }
+    }
+
+    public bool VersaoFirebird50
+    {
+        get => _versaoFirebird == "5.0";
+        set { if (value) VersaoFirebird = "5.0"; }
+    }
+
     private IniPreferencias BuildPreferencias() => new()
     {
         Usuario                  = Usuario.Trim(),
@@ -436,6 +462,7 @@ public class InstanceFlyoutViewModel : ViewModelBase
         IFileLockerService fileLockerService,
         IDialogService dialogService,
         ILogService log,
+        IUserSettingsService userSettingsService,
         Func<EcoInstance, Task> onConfirmado,
         Action fecharFlyout,
         IReadOnlyCollection<string> apelidosExistentes,
@@ -451,6 +478,7 @@ public class InstanceFlyoutViewModel : ViewModelBase
         _fileLockerService        = fileLockerService;
         _dialogService            = dialogService;
         _log                      = log;
+        _userSettingsService      = userSettingsService;
         _onConfirmado             = onConfirmado;
         _fecharFlyout             = fecharFlyout;
         _apelidosExistentes       = apelidosExistentes;
@@ -540,6 +568,11 @@ public class InstanceFlyoutViewModel : ViewModelBase
                     MonitorarTempoSelects    = prefs.MonitorarTempoSelects;
                     SincronizaTabelaPreco    = prefs.SincronizaTabelaPreco;
                     MultiplasInstancias      = prefs.MultiplasInstancias;
+                    VersaoFirebird           = prefs.VersaoFirebird;
+                }
+                else
+                {
+                    VersaoFirebird = _instanciaExistente.VersaoFirebird;
                 }
 
                 UsarVersaoExecutavel = _instanciaExistente.UsarVersaoExecutavel;
@@ -933,6 +966,36 @@ public class InstanceFlyoutViewModel : ViewModelBase
 
             var prefs = BuildPreferencias();
 
+            // ── Resolver porta e DLL conforme versão do Firebird ───────────
+            var s = _userSettingsService.Settings;
+            bool eFb25 = string.Equals(VersaoFirebird, "2.5", StringComparison.Ordinal);
+            string porta   = eFb25 ? s.PortaFirebird25   : s.PortaFirebird50;
+            string dllPath = eFb25 ? s.DllFirebird25Path : s.DllFirebird50Path;
+
+            if (string.IsNullOrEmpty(dllPath))
+            {
+                if (eFb25 && File.Exists(EcoPathConstants.FirebirdLegacyDll))
+                {
+                    // Migra fbclient.dll legada para a pasta estruturada
+                    Directory.CreateDirectory(EcoPathConstants.Firebird25Dir);
+                    File.Copy(EcoPathConstants.FirebirdLegacyDll, EcoPathConstants.Firebird25DllPadrao, overwrite: true);
+                    dllPath = EcoPathConstants.Firebird25DllPadrao;
+                    s.DllFirebird25Path = dllPath;
+                    await _userSettingsService.SalvarAsync();
+                    _log.Info(nameof(ConfirmarAsync), $"fbclient.dll legada migrada para '{dllPath}'.");
+                }
+                else if (!eFb25 && File.Exists(EcoPathConstants.Firebird50DllPadrao))
+                {
+                    dllPath = EcoPathConstants.Firebird50DllPadrao;
+                }
+            }
+
+            bool avisoDll = !File.Exists(dllPath);
+            if (avisoDll)
+                _log.Info(nameof(ConfirmarAsync), $"fbclient.dll não encontrada para FB {VersaoFirebird}: '{dllPath}'.");
+
+            var opcoes = new ImplantarOpcoes(prefs, VersaoFirebird, porta, dllPath);
+
             if (ExecutavelSelecionado is not null)
             {
                 bool fonteAlterada = _instanciaExistente is null
@@ -950,14 +1013,14 @@ public class InstanceFlyoutViewModel : ViewModelBase
                     (exePath, iniPath) = await _instanceSetupService.ImplantarAsync(
                         ExecutavelSelecionado.ExePath,
                         BancoSelecionado!.EcoPath,
-                        prefs);
+                        opcoes);
                 }
                 else
                 {
                     // Executável e base não mudaram — reutiliza os arquivos já implantados
                     exePath = _instanciaExistente!.ExecutavelPath;
                     iniPath = _instanciaExistente.IniPath;
-                    await _instanceSetupService.AtualizarPreferenciasAsync(iniPath, prefs);
+                    await _instanceSetupService.AtualizarPreferenciasAsync(iniPath, opcoes);
                 }
             }
             else
@@ -1015,8 +1078,10 @@ public class InstanceFlyoutViewModel : ViewModelBase
                 VersaoBanco             = versaoBancoFinal,
                 UsarVersaoExecutavel    = UsarVersaoExecutavel,
                 VersaoBancoOriginal     = versaoBancoOriginal,
+                VersaoFirebird          = VersaoFirebird,
+                AvisoDllFirebird        = avisoDll,
                 PreferenciasIniPendente = ExecutavelSelecionado is null ? prefs : null
-            };
+            };;
 
             await _onConfirmado(instancia);
 
@@ -1064,7 +1129,9 @@ public class InstanceFlyoutViewModel : ViewModelBase
                 IniPath              = _instanciaExistente.IniPath,
                 VersaoBanco          = _instanciaExistente.VersaoBancoOriginal,
                 UsarVersaoExecutavel = false,
-                VersaoBancoOriginal  = string.Empty
+                VersaoBancoOriginal  = string.Empty,
+                VersaoFirebird       = _instanciaExistente.VersaoFirebird,
+                AvisoDllFirebird     = _instanciaExistente.AvisoDllFirebird,
             };
 
             await _onConfirmado(instanciaRestaurada);

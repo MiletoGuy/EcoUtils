@@ -14,6 +14,14 @@ public static class EcoPathConstants
     public static string FirebirdUser     { get; set; } = "sysdba";
     public static string FirebirdPassword { get; set; } = "masterkey";
 
+    // Estrutura de diretórios Firebird
+    public static string FirebirdBaseDir     => Path.Combine(WindowsDir, "Firebird");
+    public static string Firebird25Dir       => Path.Combine(FirebirdBaseDir, "2.5");
+    public static string Firebird50Dir       => Path.Combine(FirebirdBaseDir, "5.0");
+    public static string Firebird25DllPadrao => Path.Combine(Firebird25Dir, "fbclient.dll");
+    public static string Firebird50DllPadrao => Path.Combine(Firebird50Dir, "fbclient.dll");
+    public static string FirebirdLegacyDll   => Path.Combine(WindowsDir, "fbclient.dll");
+
     // Derivados — sempre consistentes com os dirs base
     public static string UtilsDir     => Path.Combine(WindowsDir, "Utils");
     public static string EcoIniPadrao => Path.Combine(WindowsDir, "eco.ini");
