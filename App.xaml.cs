@@ -5,6 +5,7 @@ using EcoUtils.Infrastructure;
 using EcoUtils.Services;
 using EcoUtils.Services.Interfaces;
 using EcoUtils.ViewModels;
+using EcoUtils.Views;
 using Microsoft.Extensions.DependencyInjection;
 
 namespace EcoUtils;
@@ -35,43 +36,74 @@ public partial class App : Application
                 MessageBoxImage.Error);
         };
 
-        CarregarConfiguracoes();
-        EmbeddedToolsExtractor.EnsureExtracted();
+        var splash = new SplashWindow();
+        splash.Show();
 
-        var sc = new ServiceCollection();
+        _ = IniciarAsync(splash);
+    }
 
-        // Infrastructure
-        sc.AddSingleton<ILogService,            LogService>();
+    private async Task IniciarAsync(SplashWindow splash)
+    {
+        try
+        {
+            CarregarConfiguracoes();
 
-        // Data
-        sc.AddSingleton<IInstanceRepository,    InstanceRepository>();
+            splash.AtualizarStatus("Preparando ferramentas...");
 
-        // Domain services
-        sc.AddSingleton<IVersionCatalogService,    VersionCatalogService>();
-        sc.AddSingleton<IDatabaseDiscoveryService, DatabaseDiscoveryService>();
-        sc.AddSingleton<IDatabaseVersionService,   DatabaseVersionService>();
-        sc.AddSingleton<IInstanceSetupService,     InstanceSetupService>();
-        sc.AddSingleton<IDatabaseImportService,    DatabaseImportService>();
-        sc.AddSingleton<IExecutableImportService,  ExecutableImportService>();
-        sc.AddSingleton<IFileLockerService,        FileLockerService>();
-        sc.AddSingleton<IRestoreService,           RestoreService>();
-        sc.AddSingleton<IRestoreJobService,        RestoreJobService>();
-        sc.AddSingleton<ILaunchService,            LaunchService>();
-        sc.AddSingleton<IDialogService,            DialogService>();
-        sc.AddSingleton<IUpdateService,            UpdateService>();
-        sc.AddSingleton<IUserSettingsService,      UserSettingsService>();
+            // Extrai binários Firebird embedados em background, sem bloquear a UI
+            await EmbeddedToolsExtractor.EnsureExtractedAsync(
+                new Progress<string>(f => splash.AtualizarStatus($"Extraindo {f}...")));
 
-        // ViewModels
-        sc.AddSingleton<ExecutarEcoViewModel>();
-        sc.AddSingleton<MainViewModel>();
+            splash.AtualizarStatus("Iniciando...");
 
-        // Shell
-        sc.AddSingleton<MainWindow>();
+            var sc = new ServiceCollection();
 
-        _services = sc.BuildServiceProvider();
+            // Infrastructure
+            sc.AddSingleton<ILogService,            LogService>();
 
-        var window = _services.GetRequiredService<MainWindow>();
-        window.Show();
+            // Data
+            sc.AddSingleton<IInstanceRepository,    InstanceRepository>();
+
+            // Domain services
+            sc.AddSingleton<IVersionCatalogService,    VersionCatalogService>();
+            sc.AddSingleton<IDatabaseDiscoveryService, DatabaseDiscoveryService>();
+            sc.AddSingleton<IDatabaseVersionService,   DatabaseVersionService>();
+            sc.AddSingleton<IInstanceSetupService,     InstanceSetupService>();
+            sc.AddSingleton<IDatabaseImportService,    DatabaseImportService>();
+            sc.AddSingleton<IExecutableImportService,  ExecutableImportService>();
+            sc.AddSingleton<IFileLockerService,        FileLockerService>();
+            sc.AddSingleton<IRestoreService,           RestoreService>();
+            sc.AddSingleton<IRestoreJobService,        RestoreJobService>();
+            sc.AddSingleton<ILaunchService,            LaunchService>();
+            sc.AddSingleton<IDialogService,            DialogService>();
+            sc.AddSingleton<IUpdateService,            UpdateService>();
+            sc.AddSingleton<IUserSettingsService,      UserSettingsService>();
+
+            // ViewModels
+            sc.AddSingleton<ExecutarEcoViewModel>();
+            sc.AddSingleton<MainViewModel>();
+
+            // Shell
+            sc.AddSingleton<MainWindow>();
+
+            _services = sc.BuildServiceProvider();
+
+            var window = _services.GetRequiredService<MainWindow>();
+            window.Show();
+        }
+        catch (Exception ex)
+        {
+            MessageBox.Show(
+                $"Falha ao inicializar o EcoUtils:\n\n{ex.Message}",
+                "EcoUtils — Erro na inicialização",
+                MessageBoxButton.OK,
+                MessageBoxImage.Error);
+            Shutdown(1);
+        }
+        finally
+        {
+            splash.Close();
+        }
     }
 
     protected override void OnExit(ExitEventArgs e)

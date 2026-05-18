@@ -93,6 +93,7 @@ obj/Debug/net10.0-windows/
   ConfirmDialog.g.cs
   ExecutarEcoView.g.cs
   InstanceFlyoutView.g.cs
+  SplashWindow.g.cs
   TextInputDialog.g.cs
   VersionBuildDialog.g.cs
 Services/
@@ -139,6 +140,7 @@ Views/
  ConfirmDialog.xaml.cs
  ExecutarEcoView.xaml.cs
  InstanceFlyoutView.xaml.cs
+ SplashWindow.xaml.cs
  TextInputDialog.xaml.cs
  VersionBuildDialog.xaml.cs
 

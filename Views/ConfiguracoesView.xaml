@@ -7,15 +7,24 @@
         <converters:InverseBoolToVisibilityConverter x:Key="InverseBoolToVisibility"/>
 
         <!-- Estilo para o nav button da sidebar -->
-        <Style x:Key="NavButton" TargetType="Button" BasedOn="{StaticResource ButtonBase}">
-            <Setter Property="HorizontalAlignment"        Value="Stretch"/>
-            <Setter Property="HorizontalContentAlignment" Value="Left"/>
-            <Setter Property="BorderThickness"            Value="0"/>
-            <Setter Property="Padding"                    Value="16,9"/>
-            <Setter Property="Background"                 Value="Transparent"/>
+        <Style x:Key="NavButton"
+                TargetType="Button"
+                BasedOn="{StaticResource ButtonBase}">
+            <Setter Property="HorizontalAlignment"
+                    Value="Stretch"/>
+            <Setter Property="HorizontalContentAlignment"
+                    Value="Left"/>
+            <Setter Property="BorderThickness"
+                    Value="0"/>
+            <Setter Property="Padding"
+                    Value="16,9"/>
+            <Setter Property="Background"
+                    Value="Transparent"/>
             <Style.Triggers>
-                <Trigger Property="IsMouseOver" Value="True">
-                    <Setter Property="Background" Value="{StaticResource SidebarItemHover}"/>
+                <Trigger Property="IsMouseOver"
+                        Value="True">
+                    <Setter Property="Background"
+                            Value="{StaticResource SidebarItemHover}"/>
                 </Trigger>
             </Style.Triggers>
         </Style>
@@ -28,40 +37,53 @@
         </Grid.ColumnDefinitions>
 
         <!-- Sidebar interna -->
-        <Grid Grid.Column="0" Background="{StaticResource SidebarBackground}">
+        <Grid Grid.Column="0"
+                Background="{StaticResource SidebarBackground}">
             <StackPanel Margin="0,12,0,0">
                 <!-- Geral -->
                 <Button Command="{Binding NavGeralCommand}"
                         Style="{StaticResource NavButton}">
                     <Button.Resources>
-                        <Style TargetType="Button" BasedOn="{StaticResource NavButton}">
+                        <Style TargetType="Button"
+                                BasedOn="{StaticResource NavButton}">
                             <Style.Triggers>
-                                <DataTrigger Binding="{Binding AbaGeralAtiva}" Value="True">
-                                    <Setter Property="Background" Value="{StaticResource SidebarItemActive}"/>
+                                <DataTrigger Binding="{Binding AbaGeralAtiva}"
+                                        Value="True">
+                                    <Setter Property="Background"
+                                            Value="{StaticResource SidebarItemActive}"/>
                                 </DataTrigger>
                             </Style.Triggers>
                         </Style>
                     </Button.Resources>
                     <StackPanel Orientation="Horizontal">
-                        <TextBlock Text="⚙" Margin="0,0,8,0" Foreground="{StaticResource TextSecondary}"/>
-                        <TextBlock Text="Geral" Foreground="{StaticResource TextPrimary}"/>
+                        <TextBlock Text="⚙"
+                                Margin="0,0,8,0"
+                                Foreground="{StaticResource TextSecondary}"/>
+                        <TextBlock Text="Geral"
+                                Foreground="{StaticResource TextPrimary}"/>
                     </StackPanel>
                 </Button>
                 <!-- Patchnotes -->
                 <Button Command="{Binding NavPatchnotesCommand}"
                         Style="{StaticResource NavButton}">
                     <Button.Resources>
-                        <Style TargetType="Button" BasedOn="{StaticResource NavButton}">
+                        <Style TargetType="Button"
+                                BasedOn="{StaticResource NavButton}">
                             <Style.Triggers>
-                                <DataTrigger Binding="{Binding AbaPatchnotesAtiva}" Value="True">
-                                    <Setter Property="Background" Value="{StaticResource SidebarItemActive}"/>
+                                <DataTrigger Binding="{Binding AbaPatchnotesAtiva}"
+                                        Value="True">
+                                    <Setter Property="Background"
+                                            Value="{StaticResource SidebarItemActive}"/>
                                 </DataTrigger>
                             </Style.Triggers>
                         </Style>
                     </Button.Resources>
                     <StackPanel Orientation="Horizontal">
-                        <TextBlock Text="📋" Margin="0,0,8,0" Foreground="{StaticResource TextSecondary}"/>
-                        <TextBlock Text="Patchnotes" Foreground="{StaticResource TextPrimary}"/>
+                        <TextBlock Text="📋"
+                                Margin="0,0,8,0"
+                                Foreground="{StaticResource TextSecondary}"/>
+                        <TextBlock Text="Patchnotes"
+                                Foreground="{StaticResource TextPrimary}"/>
                     </StackPanel>
                 </Button>
             </StackPanel>
@@ -114,20 +136,26 @@
                                         <RowDefinition Height="Auto"/>
                                     </Grid.RowDefinitions>
 
-                                    <TextBlock Grid.Column="0" Grid.Row="0" Text="Porta"
+                                    <TextBlock Grid.Column="0"
+                                            Grid.Row="0"
+                                            Text="Porta"
                                                Foreground="{StaticResource TextSecondary}"
                                                Margin="0,0,0,4"/>
-                                    <TextBlock Grid.Column="2" Grid.Row="0" Text="fbclient.dll"
+                                    <TextBlock Grid.Column="2"
+                                            Grid.Row="0"
+                                            Text="fbclient.dll"
                                                Foreground="{StaticResource TextSecondary}"
                                                Margin="0,0,0,4"/>
 
-                                    <TextBox Grid.Column="0" Grid.Row="1"
-                                             Text="{Binding PortaFirebird25, UpdateSourceTrigger=PropertyChanged}"
-                                             MaxLength="4"/>
-                                    <TextBox Grid.Column="2" Grid.Row="1"
+                                    <TextBox Grid.Column="0"
+                                            Grid.Row="1"
+                                             Text="{Binding PortaFirebird25, UpdateSourceTrigger=PropertyChanged}"/>
+                                    <TextBox Grid.Column="2"
+                                            Grid.Row="1"
                                              Text="{Binding DllFirebird25Path, UpdateSourceTrigger=PropertyChanged}"
                                              Margin="0,0,6,0"/>
-                                    <Button Grid.Column="3" Grid.Row="1"
+                                    <Button Grid.Column="3"
+                                            Grid.Row="1"
                                             Content="..."
                                             Style="{StaticResource ButtonSecondary}"
                                             Padding="10,0"
@@ -151,20 +179,27 @@
                                         <RowDefinition Height="Auto"/>
                                     </Grid.RowDefinitions>
 
-                                    <TextBlock Grid.Column="0" Grid.Row="0" Text="Porta"
+                                    <TextBlock Grid.Column="0"
+                                            Grid.Row="0"
+                                            Text="Porta"
                                                Foreground="{StaticResource TextSecondary}"
                                                Margin="0,0,0,4"/>
-                                    <TextBlock Grid.Column="2" Grid.Row="0" Text="fbclient.dll"
+                                    <TextBlock Grid.Column="2"
+                                            Grid.Row="0"
+                                            Text="fbclient.dll"
                                                Foreground="{StaticResource TextSecondary}"
                                                Margin="0,0,0,4"/>
 
-                                    <TextBox Grid.Column="0" Grid.Row="1"
+                                    <TextBox Grid.Column="0"
+                                            Grid.Row="1"
                                              Text="{Binding PortaFirebird50, UpdateSourceTrigger=PropertyChanged}"
                                              MaxLength="4"/>
-                                    <TextBox Grid.Column="2" Grid.Row="1"
+                                    <TextBox Grid.Column="2"
+                                            Grid.Row="1"
                                              Text="{Binding DllFirebird50Path, UpdateSourceTrigger=PropertyChanged}"
                                              Margin="0,0,6,0"/>
-                                    <Button Grid.Column="3" Grid.Row="1"
+                                    <Button Grid.Column="3"
+                                            Grid.Row="1"
                                             Content="..."
                                             Style="{StaticResource ButtonSecondary}"
                                             Padding="10,0"
@@ -182,7 +217,8 @@
                             <TextBlock Foreground="{StaticResource TextSecondary}"
                                        Margin="0,0,0,8">
                                 <Run Text="Versão atual: "/>
-                                <Run Text="{Binding VersaoAtual, Mode=OneWay}" FontWeight="SemiBold"/>
+                                <Run Text="{Binding VersaoAtual, Mode=OneWay}"
+                                        FontWeight="SemiBold"/>
                             </TextBlock>
 
                             <TextBlock Text="Selecione uma versão para instalar:"
@@ -283,15 +319,18 @@
                                             <!-- Features -->
                                             <StackPanel Visibility="{Binding TemFeatures, Converter={StaticResource BoolToVisibility}}"
                                                         Margin="0,0,0,8">
-                                                <StackPanel Orientation="Horizontal" Margin="0,0,0,6">
-                                                    <Border Width="3" CornerRadius="2"
+                                                <StackPanel Orientation="Horizontal"
+                                                        Margin="0,0,0,6">
+                                                    <Border Width="3"
+                                                            CornerRadius="2"
                                                             Background="{StaticResource StatusSuccess}"
                                                             Margin="0,0,8,0"/>
                                                     <TextBlock Text="Features"
                                                                FontWeight="SemiBold"
                                                                Foreground="{StaticResource StatusSuccess}"/>
                                                 </StackPanel>
-                                                <ItemsControl ItemsSource="{Binding Features}" Margin="11,0,0,0">
+                                                <ItemsControl ItemsSource="{Binding Features}"
+                                                        Margin="11,0,0,0">
                                                     <ItemsControl.ItemTemplate>
                                                         <DataTemplate>
                                                             <Grid Margin="0,2">
@@ -299,7 +338,8 @@
                                                                     <ColumnDefinition Width="14"/>
                                                                     <ColumnDefinition Width="*"/>
                                                                 </Grid.ColumnDefinitions>
-                                                                <TextBlock Grid.Column="0" Text="›"
+                                                                <TextBlock Grid.Column="0"
+                                                                        Text="›"
                                                                            Foreground="{StaticResource StatusSuccess}"
                                                                            VerticalAlignment="Top"
                                                                            Margin="0,1,0,0"/>
@@ -316,15 +356,18 @@
 
                                             <!-- Bugs Corrigidos -->
                                             <StackPanel Visibility="{Binding TemBugs, Converter={StaticResource BoolToVisibility}}">
-                                                <StackPanel Orientation="Horizontal" Margin="0,0,0,6">
-                                                    <Border Width="3" CornerRadius="2"
+                                                <StackPanel Orientation="Horizontal"
+                                                        Margin="0,0,0,6">
+                                                    <Border Width="3"
+                                                            CornerRadius="2"
                                                             Background="{StaticResource StatusWarning}"
                                                             Margin="0,0,8,0"/>
                                                     <TextBlock Text="Bugs Corrigidos"
                                                                FontWeight="SemiBold"
                                                                Foreground="{StaticResource StatusWarning}"/>
                                                 </StackPanel>
-                                                <ItemsControl ItemsSource="{Binding BugsCorrigidos}" Margin="11,0,0,0">
+                                                <ItemsControl ItemsSource="{Binding BugsCorrigidos}"
+                                                        Margin="11,0,0,0">
                                                     <ItemsControl.ItemTemplate>
                                                         <DataTemplate>
                                                             <Grid Margin="0,2">
@@ -332,7 +375,8 @@
                                                                     <ColumnDefinition Width="14"/>
                                                                     <ColumnDefinition Width="*"/>
                                                                 </Grid.ColumnDefinitions>
-                                                                <TextBlock Grid.Column="0" Text="›"
+                                                                <TextBlock Grid.Column="0"
+                                                                        Text="›"
                                                                            Foreground="{StaticResource StatusWarning}"
                                                                            VerticalAlignment="Top"
                                                                            Margin="0,1,0,0"/>
