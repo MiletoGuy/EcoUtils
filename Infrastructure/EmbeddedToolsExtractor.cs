@@ -1,5 +1,6 @@
 using System.IO;
 using System.Reflection;
+using System.Security.Cryptography;
 
 namespace EcoUtils.Infrastructure;
 
@@ -19,7 +20,15 @@ public static class EmbeddedToolsExtractor
         ("EcoUtils.Tools.fbclient.dll", "fbclient.dll"),
     ];
 
-    public static void EnsureExtracted()
+    /// <summary>
+    /// Extrai os tools embedados de forma assíncrona, reportando o nome de cada
+    /// arquivo que está sendo escrito via <paramref name="progress"/>.
+    /// Arquivos já extraídos e inalterados (verificado por SHA-256) são pulados.
+    /// </summary>
+    public static Task EnsureExtractedAsync(IProgress<string>? progress = null)
+        => Task.Run(() => EnsureExtracted(progress));
+
+    public static void EnsureExtracted(IProgress<string>? progress = null)
     {
         var toolsDir = EcoPathConstants.ToolsDir;
         Directory.CreateDirectory(toolsDir);
@@ -33,13 +42,39 @@ public static class EmbeddedToolsExtractor
 
             var destPath = Path.Combine(toolsDir, fileName);
 
-            // Só regrava se o tamanho diferir — evita I/O desnecessário
-            // e não interrompe um gbak em execução no meio de uma restauração.
-            if (File.Exists(destPath) && new FileInfo(destPath).Length == stream.Length)
+            if (File.Exists(destPath) && HashesIguais(stream, destPath))
                 continue;
 
+            progress?.Report(fileName);
+
+            stream.Position = 0;
             using var fileStream = new FileStream(destPath, FileMode.Create, FileAccess.Write, FileShare.None);
             stream.CopyTo(fileStream);
+        }
+    }
+
+    /// <summary>
+    /// Retorna <c>true</c> se o SHA-256 do <paramref name="resource"/> coincide
+    /// com o do arquivo em <paramref name="destPath"/>.
+    /// </summary>
+    private static bool HashesIguais(Stream resource, string destPath)
+    {
+        try
+        {
+            Span<byte> hashResource = stackalloc byte[32];
+            Span<byte> hashDest     = stackalloc byte[32];
+
+            SHA256.HashData(resource, hashResource);
+            resource.Position = 0;
+
+            using var fs = new FileStream(destPath, FileMode.Open, FileAccess.Read, FileShare.Read);
+            SHA256.HashData(fs, hashDest);
+
+            return hashResource.SequenceEqual(hashDest);
+        }
+        catch
+        {
+            return false;
         }
     }
 }
