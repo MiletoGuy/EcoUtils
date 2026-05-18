@@ -55,13 +55,6 @@ public class ConfiguracoesViewModel : ViewModelBase
     public ICommand NavGeralCommand      { get; }
     public ICommand NavPatchnotesCommand { get; }
 
-    // ── Geral ────────────────────────────────────────────────────
-    private string _ibExpertPath;
-    public string IbExpertPath
-    {
-        get => _ibExpertPath;
-        set => SetProperty(ref _ibExpertPath, value);
-    }
     // ── Firebird ─────────────────────────────────────────
     private string _portaFirebird25 = string.Empty;
     public string PortaFirebird25
@@ -147,7 +140,7 @@ public class ConfiguracoesViewModel : ViewModelBase
 
     public ICommand SalvarCommand               { get; }
     public ICommand CancelarCommand             { get; }
-    public ICommand BrowseIbExpertCommand       { get; }
+
     public ICommand BrowseFirebird25DllCommand  { get; }
     public ICommand BrowseFirebird50DllCommand  { get; }
     public AsyncRelayCommand TrocarVersaoCommand { get; }
@@ -171,7 +164,6 @@ public class ConfiguracoesViewModel : ViewModelBase
         _instanceSetupService = instanceSetupService;
         _log                  = log;
         _fechar               = fechar;
-        _ibExpertPath         = userSettingsService.Settings.IbExpertPath;
         _portaFirebird25      = userSettingsService.Settings.PortaFirebird25;
         _portaFirebird50      = userSettingsService.Settings.PortaFirebird50;
         _dllFirebird25Path    = userSettingsService.Settings.DllFirebird25Path;
@@ -183,23 +175,6 @@ public class ConfiguracoesViewModel : ViewModelBase
         SalvarCommand = new AsyncRelayCommand(async _ => await SalvarAsync());
 
         CancelarCommand = new RelayCommand(_ => _fechar());
-
-        BrowseIbExpertCommand = new RelayCommand(_ =>
-        {
-            var dlg = new OpenFileDialog
-            {
-                Title  = "Localizar IBExpert.exe",
-                Filter = "IBExpert|IBExpert.exe|Executáveis (*.exe)|*.exe",
-            };
-
-            if (File.Exists(IbExpertPath))
-                dlg.InitialDirectory = Path.GetDirectoryName(IbExpertPath);
-            else if (Directory.Exists(Path.GetDirectoryName(IbExpertPath)))
-                dlg.InitialDirectory = Path.GetDirectoryName(IbExpertPath);
-
-            if (dlg.ShowDialog() == true)
-                IbExpertPath = dlg.FileName;
-        });
 
         BrowseFirebird25DllCommand = new RelayCommand(_ =>
         {
@@ -227,7 +202,6 @@ public class ConfiguracoesViewModel : ViewModelBase
     public void Resetar()
     {
         var s = _userSettingsService.Settings;
-        IbExpertPath      = s.IbExpertPath;
         PortaFirebird25   = s.PortaFirebird25;
         PortaFirebird50   = s.PortaFirebird50;
         DllFirebird25Path = string.IsNullOrEmpty(s.DllFirebird25Path) && File.Exists(EcoPathConstants.Firebird25DllPadrao)
@@ -246,7 +220,6 @@ public class ConfiguracoesViewModel : ViewModelBase
         var portaAntiga25 = s.PortaFirebird25;
         var portaAntiga50 = s.PortaFirebird50;
 
-        s.IbExpertPath      = IbExpertPath.Trim();
         s.PortaFirebird25   = PortaFirebird25.Trim();
         s.PortaFirebird50   = PortaFirebird50.Trim();
         s.DllFirebird25Path = DllFirebird25Path.Trim();

@@ -12,8 +12,10 @@ public static class EmbeddedToolsExtractor
 {
     private static readonly (string ResourceName, string FileName)[] Tools =
     [
-        ("EcoUtils.Tools.gbak.exe",     "gbak.exe"),
-        ("EcoUtils.Tools.gfix.exe",     "gfix.exe"),
+        ("EcoUtils.Tools.gbak25.exe",   "gbak25.exe"),
+        ("EcoUtils.Tools.gfix25.exe",   "gfix25.exe"),
+        ("EcoUtils.Tools.gbak50.exe",   "gbak50.exe"),
+        ("EcoUtils.Tools.gfix50.exe",   "gfix50.exe"),
         ("EcoUtils.Tools.fbclient.dll", "fbclient.dll"),
     ];
 

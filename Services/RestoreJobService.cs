@@ -69,6 +69,26 @@ public class RestoreJobService : IRestoreJobService
         }
     }
 
+    public bool HaJobsAtivos()
+    {
+        lock (_lock)
+            return _jobs.Values.Any(e => e.Status == RestoreJobStatus.Restaurando);
+    }
+
+    public void CancelarTodosAtivos()
+    {
+        List<RestoreJobEntry> ativos;
+        lock (_lock)
+            ativos = _jobs.Values
+                .Where(e => e.Status == RestoreJobStatus.Restaurando)
+                .ToList();
+
+        foreach (var entry in ativos)
+        {
+            try { entry.Cts.Cancel(); } catch { }
+        }
+    }
+
     public Task CancelarAsync(string destinoEco)
     {
         RestoreJobEntry? entry;
@@ -124,7 +144,16 @@ public class RestoreJobService : IRestoreJobService
 
     private void AtualizarEstadoFinal(RestoreJobEntry entry, RestoreJobStatus status, string? erro)
     {
-        Application.Current.Dispatcher.Invoke(() =>
+        var dispatcher = Application.Current?.Dispatcher;
+        if (dispatcher is null || dispatcher.HasShutdownStarted || dispatcher.HasShutdownFinished)
+        {
+            // App encerrando — atualiza o estado diretamente sem dispatch (sem UI para notificar)
+            entry.Erro   = erro;
+            entry.Status = status;
+            return;
+        }
+
+        dispatcher.Invoke(() =>
         {
             entry.Erro   = erro;
             entry.Status = status;

@@ -43,7 +43,9 @@ public class InstanceSetupService : IInstanceSetupService
                 continue;
             }
 
-            if (dentroWindowsSection && linha.StartsWith("dados=", StringComparison.OrdinalIgnoreCase))
+            var eqIdxImpl = linha.IndexOf('=');
+            if (dentroWindowsSection && eqIdxImpl > 0 &&
+                linha.Substring(0, eqIdxImpl).Trim().Equals("dados", StringComparison.OrdinalIgnoreCase))
             {
                 linhas[i] = $"dados={EcoPathConstants.EcoServerHost}/{opcoes.PortaFirebird}:{basePath}";
                 substituido = true;
@@ -97,7 +99,9 @@ public class InstanceSetupService : IInstanceSetupService
                     continue;
                 }
 
-                if (dentroWindowsSection && t.StartsWith("dados=", StringComparison.OrdinalIgnoreCase))
+                var eqIdxVal = t.IndexOf('=');
+                if (dentroWindowsSection && eqIdxVal > 0 &&
+                    t.Substring(0, eqIdxVal).Trim().Equals("dados", StringComparison.OrdinalIgnoreCase))
                     return true;
             }
         }
@@ -142,7 +146,7 @@ public class InstanceSetupService : IInstanceSetupService
                 var eqIdx = t.IndexOf('=');
                 if (eqIdx <= 0) continue;
 
-                var key = t.Substring(0, eqIdx);
+                var key = t.Substring(0, eqIdx).Trim();
                 var val = t.Substring(eqIdx + 1).Trim();
 
                 if (dentroPrefs)
@@ -209,10 +213,12 @@ public class InstanceSetupService : IInstanceSetupService
                 continue;
             }
 
-            if (dentroWindows && t.StartsWith("dados=", StringComparison.OrdinalIgnoreCase))
+            var eqIdxUpd = t.IndexOf('=');
+            if (dentroWindows && eqIdxUpd > 0 &&
+                t.Substring(0, eqIdxUpd).Trim().Equals("dados", StringComparison.OrdinalIgnoreCase))
             {
                 // Preserva o caminho atual, substitui apenas o host/porta
-                var valorAtual = t.Substring("dados=".Length);
+                var valorAtual = t.Substring(eqIdxUpd + 1).Trim();
                 // Formato esperado: host:caminho  ou  host/porta:caminho
                 var idxDoisPontos = valorAtual.IndexOf(':');
                 var caminho = idxDoisPontos >= 0 ? valorAtual.Substring(idxDoisPontos + 1) : valorAtual;
@@ -281,7 +287,7 @@ public class InstanceSetupService : IInstanceSetupService
                 var eqIdx = t.IndexOf('=');
                 if (eqIdx > 0)
                 {
-                    var key = t.Substring(0, eqIdx);
+                    var key = t.Substring(0, eqIdx).Trim();
                     if (ecoValues.TryGetValue(key, out var newVal))
                     {
                         encontrados.Add(key);
@@ -352,7 +358,7 @@ public class InstanceSetupService : IInstanceSetupService
                 var eqIdx = t.IndexOf('=');
                 if (eqIdx > 0)
                 {
-                    var key = t.Substring(0, eqIdx);
+                    var key = t.Substring(0, eqIdx).Trim();
                     if (prefValues.TryGetValue(key, out var newVal))
                     {
                         encontrados.Add(key);

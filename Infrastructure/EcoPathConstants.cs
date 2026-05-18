@@ -32,6 +32,16 @@ public static class EcoPathConstants
 
     // Ferramentas bundled — extraídas de EmbeddedResource para AppData na inicialização
     public static string ToolsDir => Path.Combine(AppDataDir, "tools");
-    public static string GbakPath => Path.Combine(ToolsDir, "gbak.exe");
-    public static string GfixPath => Path.Combine(ToolsDir, "gfix.exe");
+
+    // Ferramentas Firebird 2.5 (gbak/gfix capazes de restaurar ODS 11)
+    public static string Gbak25Path => Path.Combine(ToolsDir, "gbak25.exe");
+    public static string Gfix25Path => Path.Combine(ToolsDir, "gfix25.exe");
+
+    // Ferramentas Firebird 5.0 (gbak/gfix capazes de restaurar ODS 12, 13 e 14)
+    public static string Gbak50Path => Path.Combine(ToolsDir, "gbak50.exe");
+    public static string Gfix50Path => Path.Combine(ToolsDir, "gfix50.exe");
+
+    // Atalhos para compatibilidade com código existente — apontam para ferramentas FB2.5
+    public static string GbakPath => Gbak25Path;
+    public static string GfixPath => Gfix25Path;
 }

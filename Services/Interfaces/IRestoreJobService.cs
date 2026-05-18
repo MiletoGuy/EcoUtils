@@ -30,6 +30,17 @@ public interface IRestoreJobService
     Task CancelarAsync(string destinoEco);
 
     /// <summary>
+    /// Retorna true se há pelo menos um job com status Restaurando.
+    /// </summary>
+    bool HaJobsAtivos();
+
+    /// <summary>
+    /// Cancela imediatamente todos os jobs com status Restaurando (mata os processos gbak).
+    /// Não aguarda a limpeza dos arquivos parciais.
+    /// </summary>
+    void CancelarTodosAtivos();
+
+    /// <summary>
     /// Disparado no thread da UI quando um job muda para Concluido ou Falhou.
     /// </summary>
     event EventHandler<RestoreJobEntry> JobFinalizado;

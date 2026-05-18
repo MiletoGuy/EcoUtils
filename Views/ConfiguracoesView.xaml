@@ -87,89 +87,90 @@
                             <TextBlock Text="Geral"
                                        Foreground="{StaticResource TextPrimary}"
                                        FontWeight="SemiBold"
-                                       Margin="0,0,0,20"/>
-
-                            <TextBlock Text="IBExpert"
-                                       Foreground="{StaticResource TextSecondary}"
-                                       FontWeight="SemiBold"
-                                       Margin="0,0,0,8"/>
-
-                            <TextBlock Text="Caminho do executável"
-                                       Foreground="{StaticResource TextSecondary}"
-                                       Margin="0,0,0,4"/>
-
-                            <Grid>
-                                <Grid.ColumnDefinitions>
-                                    <ColumnDefinition Width="*"/>
-                                    <ColumnDefinition Width="Auto"/>
-                                </Grid.ColumnDefinitions>
-                                <TextBox Grid.Column="0"
-                                         Text="{Binding IbExpertPath, UpdateSourceTrigger=PropertyChanged}"
-                                         Margin="0,0,6,0"/>
-                                <Button Grid.Column="1"
-                                        Content="..."
-                                        Style="{StaticResource ButtonSecondary}"
-                                        Padding="10,0"
-                                        Command="{Binding BrowseIbExpertCommand}"/>
-                            </Grid>
+                                       Margin="0,0,0,12"/>
 
                             <!-- ── Firebird ── -->
                             <TextBlock Text="Firebird"
-                                       Foreground="{StaticResource TextSecondary}"
-                                       FontWeight="SemiBold"
-                                       Margin="0,20,0,8"/>
+                                       Foreground="{StaticResource TextPrimary}"
+                                       FontWeight="Bold"
+                                       FontSize="13"
+                                       Margin="0,0,0,12"/>
 
-                            <TextBlock Text="Porta Firebird 2.5"
-                                       Foreground="{StaticResource TextSecondary}"
-                                       Margin="0,0,0,4"/>
-                            <TextBox Text="{Binding PortaFirebird25, UpdateSourceTrigger=PropertyChanged}"
-                                     Margin="0,0,0,10"
-                                     Width="120"
-                                     HorizontalAlignment="Left"/>
+                            <StackPanel>
+                                <!-- Firebird 2.5 -->
+                                <TextBlock Text="Firebird 2.5"
+                                           Foreground="{StaticResource TextSecondary}"
+                                           FontWeight="SemiBold"
+                                           Margin="0,0,0,6"/>
+                                <Grid Margin="0,0,0,16">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="60"/>
+                                        <ColumnDefinition Width="12"/>
+                                        <ColumnDefinition Width="*"/>
+                                        <ColumnDefinition Width="Auto"/>
+                                    </Grid.ColumnDefinitions>
+                                    <Grid.RowDefinitions>
+                                        <RowDefinition Height="Auto"/>
+                                        <RowDefinition Height="Auto"/>
+                                    </Grid.RowDefinitions>
 
-                            <TextBlock Text="Porta Firebird 5.0"
-                                       Foreground="{StaticResource TextSecondary}"
-                                       Margin="0,0,0,4"/>
-                            <TextBox Text="{Binding PortaFirebird50, UpdateSourceTrigger=PropertyChanged}"
-                                     Margin="0,0,0,10"
-                                     Width="120"
-                                     HorizontalAlignment="Left"/>
+                                    <TextBlock Grid.Column="0" Grid.Row="0" Text="Porta"
+                                               Foreground="{StaticResource TextSecondary}"
+                                               Margin="0,0,0,4"/>
+                                    <TextBlock Grid.Column="2" Grid.Row="0" Text="fbclient.dll"
+                                               Foreground="{StaticResource TextSecondary}"
+                                               Margin="0,0,0,4"/>
 
-                            <TextBlock Text="fbclient.dll — Firebird 2.5"
-                                       Foreground="{StaticResource TextSecondary}"
-                                       Margin="0,0,0,4"/>
-                            <Grid Margin="0,0,0,10">
-                                <Grid.ColumnDefinitions>
-                                    <ColumnDefinition Width="*"/>
-                                    <ColumnDefinition Width="Auto"/>
-                                </Grid.ColumnDefinitions>
-                                <TextBox Grid.Column="0"
-                                         Text="{Binding DllFirebird25Path, UpdateSourceTrigger=PropertyChanged}"
-                                         Margin="0,0,6,0"/>
-                                <Button Grid.Column="1"
-                                        Content="..."
-                                        Style="{StaticResource ButtonSecondary}"
-                                        Padding="10,0"
-                                        Command="{Binding BrowseFirebird25DllCommand}"/>
-                            </Grid>
+                                    <TextBox Grid.Column="0" Grid.Row="1"
+                                             Text="{Binding PortaFirebird25, UpdateSourceTrigger=PropertyChanged}"
+                                             MaxLength="4"/>
+                                    <TextBox Grid.Column="2" Grid.Row="1"
+                                             Text="{Binding DllFirebird25Path, UpdateSourceTrigger=PropertyChanged}"
+                                             Margin="0,0,6,0"/>
+                                    <Button Grid.Column="3" Grid.Row="1"
+                                            Content="..."
+                                            Style="{StaticResource ButtonSecondary}"
+                                            Padding="10,0"
+                                            Command="{Binding BrowseFirebird25DllCommand}"/>
+                                </Grid>
 
-                            <TextBlock Text="fbclient.dll — Firebird 5.0"
-                                       Foreground="{StaticResource TextSecondary}"
-                                       Margin="0,0,0,4"/>
-                            <Grid Margin="0,0,0,10">
-                                <Grid.ColumnDefinitions>
-                                    <ColumnDefinition Width="*"/>
-                                    <ColumnDefinition Width="Auto"/>
-                                </Grid.ColumnDefinitions>
-                                <TextBox Grid.Column="0"
-                                         Text="{Binding DllFirebird50Path, UpdateSourceTrigger=PropertyChanged}"
-                                         Margin="0,0,6,0"/>
-                                <Button Grid.Column="1"
-                                        Content="..."
-                                        Style="{StaticResource ButtonSecondary}"
-                                        Padding="10,0"
-                                        Command="{Binding BrowseFirebird50DllCommand}"/>
-                            </Grid>
+                                <!-- Firebird 5.0 -->
+                                <TextBlock Text="Firebird 5.0"
+                                           Foreground="{StaticResource TextSecondary}"
+                                           FontWeight="SemiBold"
+                                           Margin="0,0,0,6"/>
+                                <Grid>
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="60"/>
+                                        <ColumnDefinition Width="12"/>
+                                        <ColumnDefinition Width="*"/>
+                                        <ColumnDefinition Width="Auto"/>
+                                    </Grid.ColumnDefinitions>
+                                    <Grid.RowDefinitions>
+                                        <RowDefinition Height="Auto"/>
+                                        <RowDefinition Height="Auto"/>
+                                    </Grid.RowDefinitions>
+
+                                    <TextBlock Grid.Column="0" Grid.Row="0" Text="Porta"
+                                               Foreground="{StaticResource TextSecondary}"
+                                               Margin="0,0,0,4"/>
+                                    <TextBlock Grid.Column="2" Grid.Row="0" Text="fbclient.dll"
+                                               Foreground="{StaticResource TextSecondary}"
+                                               Margin="0,0,0,4"/>
+
+                                    <TextBox Grid.Column="0" Grid.Row="1"
+                                             Text="{Binding PortaFirebird50, UpdateSourceTrigger=PropertyChanged}"
+                                             MaxLength="4"/>
+                                    <TextBox Grid.Column="2" Grid.Row="1"
+                                             Text="{Binding DllFirebird50Path, UpdateSourceTrigger=PropertyChanged}"
+                                             Margin="0,0,6,0"/>
+                                    <Button Grid.Column="3" Grid.Row="1"
+                                            Content="..."
+                                            Style="{StaticResource ButtonSecondary}"
+                                            Padding="10,0"
+                                            Command="{Binding BrowseFirebird50DllCommand}"/>
+                                </Grid>
+                            </StackPanel>
 
                             <!-- ── Versão do Utils ── -->
                             <TextBlock Text="Versão do Utils"

@@ -2,7 +2,6 @@ namespace EcoUtils.Models;
 
 public class UserSettings
 {
-    public string IbExpertPath      { get; set; } = @"C:\ecosis\windows\IBExpert.exe";
     public string PortaFirebird25   { get; set; } = "3050";
     public string PortaFirebird50   { get; set; } = "3051";
     public string DllFirebird25Path { get; set; } = string.Empty;

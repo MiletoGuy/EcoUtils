@@ -458,34 +458,41 @@ public class ExecutarEcoViewModel : ViewModelBase
 
     private async void OnJobFinalizado(object? sender, RestoreJobEntry job)
     {
-        var inst = Instancias.FirstOrDefault(i => i.BasePath == job.DestinoEco);
-        if (inst == null)
+        try
         {
-            _log.Warn(nameof(OnJobFinalizado), $"Job finalizado para destino sem instância vinculada: {job.DestinoEco}");
-            return;
-        }
-
-        inst.StatusRestauracao = job.Status;
-        inst.ErroRestauracao   = job.Erro;
-
-        if (job.Status == RestoreJobStatus.Concluido)
-        {
-            _log.Info(nameof(OnJobFinalizado), $"Restauração concluída para \"{inst.Apelido}\". Consultando versão do banco...");
-            await AtualizarVersaoBancoAsync(inst);
-
-            if (string.IsNullOrEmpty(inst.ExecutavelFontePath))
-                await TentarAutoSelecionarExeAsync(inst);
-
-            await Task.Delay(TimeSpan.FromSeconds(30));
-            if (inst.StatusRestauracao != RestoreJobStatus.Falhou)
+            var inst = Instancias.FirstOrDefault(i => i.BasePath == job.DestinoEco);
+            if (inst == null)
             {
-                inst.StatusRestauracao         = null;
-                inst.UltimaMensagemRestauracao = null;
+                _log.Warn(nameof(OnJobFinalizado), $"Job finalizado para destino sem instância vinculada: {job.DestinoEco}");
+                return;
+            }
+
+            inst.StatusRestauracao = job.Status;
+            inst.ErroRestauracao   = job.Erro;
+
+            if (job.Status == RestoreJobStatus.Concluido)
+            {
+                _log.Info(nameof(OnJobFinalizado), $"Restauração concluída para \"{inst.Apelido}\". Consultando versão do banco...");
+                await AtualizarVersaoBancoAsync(inst);
+
+                if (string.IsNullOrEmpty(inst.ExecutavelFontePath))
+                    await TentarAutoSelecionarExeAsync(inst);
+
+                await Task.Delay(TimeSpan.FromSeconds(30));
+                if (inst.StatusRestauracao != RestoreJobStatus.Falhou)
+                {
+                    inst.StatusRestauracao         = null;
+                    inst.UltimaMensagemRestauracao = null;
+                }
+            }
+            else if (job.Status == RestoreJobStatus.Falhou)
+            {
+                _log.Warn(nameof(OnJobFinalizado), $"Restauração falhou para \"{inst.Apelido}\": {job.Erro}");
             }
         }
-        else if (job.Status == RestoreJobStatus.Falhou)
+        catch (Exception ex)
         {
-            _log.Warn(nameof(OnJobFinalizado), $"Restauração falhou para \"{inst.Apelido}\": {job.Erro}");
+            _log.Error(nameof(OnJobFinalizado), ex);
         }
     }
 

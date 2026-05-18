@@ -1,8 +1,10 @@
 ﻿using System;
+using System.ComponentModel;
 using System.Reflection;
 using System.Runtime.InteropServices;
 using System.Windows;
 using System.Windows.Interop;
+using EcoUtils.Services.Interfaces;
 using EcoUtils.ViewModels;
 
 namespace EcoUtils;
@@ -16,15 +18,43 @@ public partial class MainWindow : Window
     private const int DWMWA_CAPTION_COLOR = 35;
     private const int DWMWA_TEXT_COLOR    = 36;
 
-    public MainWindow(MainViewModel vm)
+    private readonly IRestoreJobService _restoreJobService;
+
+    public MainWindow(MainViewModel vm, IRestoreJobService restoreJobService)
     {
         InitializeComponent();
         DataContext = vm;
 
+        _restoreJobService = restoreJobService;
+
         var version = Assembly.GetExecutingAssembly().GetName().Version;
         Title = $"EcoUtils v{version?.Major}.{version?.Minor}.{version?.Build}";
 
-        Loaded += OnLoaded;
+        Loaded  += OnLoaded;
+        Closing += OnClosing;
+    }
+
+    private void OnClosing(object? sender, CancelEventArgs e)
+    {
+        if (!_restoreJobService.HaJobsAtivos()) return;
+
+        var result = MessageBox.Show(
+            "Há uma restauração de base em andamento.\n\n" +
+            "Fechar o EcoUtils agora irá interromper o processo e o arquivo parcialmente criado será descartado.\n\n" +
+            "Deseja fechar mesmo assim?",
+            "Restauração em andamento",
+            MessageBoxButton.YesNo,
+            MessageBoxImage.Warning,
+            MessageBoxResult.No);
+
+        if (result != MessageBoxResult.Yes)
+        {
+            e.Cancel = true;
+            return;
+        }
+
+        // Cancela todos os gbak antes de fechar para não deixar processos órfãos
+        _restoreJobService.CancelarTodosAtivos();
     }
 
     private void OnLoaded(object sender, RoutedEventArgs e)

@@ -75,6 +75,7 @@ Models/
  EcoDatabase.cs
  EcoExecutavel.cs
  EcoInstance.cs
+ FirebirdOdsInfo.cs
  IniPreferencias.cs
  RestoreJobEntry.cs
  RestoreJobStatus.cs
