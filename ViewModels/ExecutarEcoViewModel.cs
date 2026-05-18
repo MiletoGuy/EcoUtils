@@ -502,12 +502,16 @@ public class ExecutarEcoViewModel : ViewModelBase
 
         var executaveis  = await _versionCatalogService.ListarExecutaveisAsync();
         var versaoBanco  = ExtrairVersaoBancoRaw(inst.VersaoBanco);
+        var major        = EcoVersionHelper.ExtrairMajor(inst.VersaoBanco);
 
         EcoExecutavel? melhorExe = null;
         if (versaoBanco is not null)
         {
             melhorExe = executaveis
-                .Where(e => string.Equals(ExtrairVersaoExeNome(e.NomeCompleto), versaoBanco, StringComparison.OrdinalIgnoreCase))
+                .Where(e => string.Equals(
+                    EcoVersionHelper.NormalizarVersaoExe(ExtrairVersaoExeNome(e.NomeCompleto) ?? string.Empty, major),
+                    versaoBanco,
+                    StringComparison.OrdinalIgnoreCase))
                 .OrderByDescending(e => e.NomeCompleto, StringComparer.OrdinalIgnoreCase)
                 .FirstOrDefault();
         }
@@ -559,13 +563,10 @@ public class ExecutarEcoViewModel : ViewModelBase
 
     // "14650000" → "650"  (mesmo algoritmo do flyout)
     private static string? ExtrairVersaoBancoRaw(string raw)
-    {
-        if (raw.Length > 5 && raw.All(char.IsDigit))
-            return raw.Substring(2, raw.Length - 5);
-        return null;
-    }
+        => EcoVersionHelper.ExtrairVersao(raw);
 
     // "Eco_650_10" → "650"
+    // "Eco_15001_10" → "001"  (normaliza removendo o major embutido, se presente)
     private static string? ExtrairVersaoExeNome(string nomeCompleto)
     {
         var partes = nomeCompleto.Split('_');
@@ -584,12 +585,14 @@ public class ExecutarEcoViewModel : ViewModelBase
         inst.VersaoBanco = raw;
 
         var versaoBanco = ExtrairVersaoBancoRaw(raw);
-        var versaoExe   = ExtrairVersaoExeNome(inst.ExecutavelNome);
-        inst.VersaoIncompativel = versaoBanco is not null && versaoExe is not null
+        var major       = EcoVersionHelper.ExtrairMajor(raw);
+        var versaoExe   = EcoVersionHelper.NormalizarVersaoExe(
+                              ExtrairVersaoExeNome(inst.ExecutavelNome) ?? string.Empty, major);
+        inst.VersaoIncompativel = versaoBanco is not null && !string.IsNullOrEmpty(versaoExe)
             && !string.Equals(versaoBanco, versaoExe, StringComparison.OrdinalIgnoreCase);
 
         _log.Info(nameof(AtualizarVersaoBancoAsync),
-            $"Versão do banco \"{inst.Apelido}\": raw={raw}, extraída={versaoBanco ?? "n/a"}, exe={versaoExe ?? "n/a"}, incompatível={inst.VersaoIncompativel}");
+            $"Versão do banco \"{inst.Apelido}\": raw={raw}, extraída={versaoBanco ?? "n/a"}, exe={versaoExe}, incompatível={inst.VersaoIncompativel}");
 
         await _instanceRepository.SalvarAsync(new List<EcoInstance>(Instancias));
     }

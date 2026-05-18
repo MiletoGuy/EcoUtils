@@ -1,6 +1,7 @@
 using System.ComponentModel;
 using System.Runtime.CompilerServices;
 using System.Text.Json.Serialization;
+using EcoUtils.Infrastructure;
 
 namespace EcoUtils.Models;
 
@@ -33,12 +34,26 @@ public class EcoInstance : INotifyPropertyChanged
     public string VersaoBanco
     {
         get => _versaoBanco;
-        set => SetProperty(ref _versaoBanco, value);
+        set
+        {
+            if (!SetProperty(ref _versaoBanco, value)) return;
+            OnPropertyChanged(nameof(VersaoBancoFormatada));
+        }
     }
 
     // ── Versão forçada do banco ──────────────────────────────────────
     public bool   UsarVersaoExecutavel { get; set; }
     public string VersaoBancoOriginal  { get; set; } = string.Empty;
+
+    /// <summary>Human-readable version, e.g. "1.4.650" or "1.5.001". Falls back to the raw value.</summary>
+    [JsonIgnore]
+    public string VersaoBancoFormatada =>
+        EcoVersionHelper.FormatarVersao(_versaoBanco) ?? _versaoBanco;
+
+    /// <summary>Human-readable original version, e.g. "1.4.650". Falls back to the raw value.</summary>
+    [JsonIgnore]
+    public string VersaoBancoOriginalFormatada =>
+        EcoVersionHelper.FormatarVersao(VersaoBancoOriginal) ?? VersaoBancoOriginal;
 
     // ── Firebird ─────────────────────────────────────────────────────
     public string VersaoFirebird    { get; set; } = "2.5";
