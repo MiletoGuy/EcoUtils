@@ -384,12 +384,12 @@
                                        HorizontalAlignment="Center"
                                        VerticalAlignment="Center"/>
                             <TextBlock Grid.Column="4"
-                                       Text="{Binding VersaoBanco}"
+                                       Text="{Binding VersaoBancoFormatada}"
                                        Foreground="{StaticResource TextSecondary}"
                                        HorizontalAlignment="Center"
                                        VerticalAlignment="Center"/>
                             <TextBlock Grid.Column="5"
-                                       Text="{Binding VersaoBancoOriginal}"
+                                       Text="{Binding VersaoBancoOriginalFormatada}"
                                        Foreground="{StaticResource TextSecondary}"
                                        HorizontalAlignment="Center"
                                        VerticalAlignment="Center"/>

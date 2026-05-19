@@ -12,19 +12,11 @@ public class DatabaseVersionService : IDatabaseVersionService
 
     public DatabaseVersionService(ILogService log) => _log = log;
 
-    public async Task<string?> ConsultarVersaoAsync(string ecoBankPath)
+    public async Task<string?> ConsultarVersaoAsync(string ecoBankPath, string portaFirebird)
     {
-        var csb = new FbConnectionStringBuilder
-        {
-            DataSource        = EcoPathConstants.EcoServerHost,
-            Database          = ecoBankPath,
-            UserID            = "SYSDBA",
-            Password          = "masterkey",
-            ConnectionTimeout = 5
-        };
-
         try
         {
+            var csb = CriarConnectionString(ecoBankPath, portaFirebird);
             await using var conn = new FbConnection(csb.ToString());
             await conn.OpenAsync();
 
@@ -39,7 +31,20 @@ public class DatabaseVersionService : IDatabaseVersionService
         }
     }
 
-    public async Task AlterarVersaoAsync(string ecoBankPath, string novaVersao)
+    public async Task AlterarVersaoAsync(string ecoBankPath, string novaVersao, string portaFirebird)
+    {
+        var csb = CriarConnectionString(ecoBankPath, portaFirebird);
+        await using var conn = new FbConnection(csb.ToString());
+        await conn.OpenAsync();
+
+        await using var cmd = new FbCommand("UPDATE TGERLICENCA SET VERSAO = @versao", conn);
+        cmd.Parameters.AddWithValue("@versao", novaVersao);
+        await cmd.ExecuteNonQueryAsync();
+
+        _log.Info(nameof(AlterarVersaoAsync), $"TGERLICENCA.VERSAO atualizado para '{novaVersao}' em '{ecoBankPath}'.");
+    }
+
+    private static FbConnectionStringBuilder CriarConnectionString(string ecoBankPath, string portaFirebird)
     {
         var csb = new FbConnectionStringBuilder
         {
@@ -50,14 +55,10 @@ public class DatabaseVersionService : IDatabaseVersionService
             ConnectionTimeout = 5
         };
 
-        await using var conn = new FbConnection(csb.ToString());
-        await conn.OpenAsync();
+        if (int.TryParse(portaFirebird, out var porta) && porta > 0)
+            csb.Port = porta;
 
-        await using var cmd = new FbCommand("UPDATE TGERLICENCA SET VERSAO = @versao", conn);
-        cmd.Parameters.AddWithValue("@versao", novaVersao);
-        await cmd.ExecuteNonQueryAsync();
-
-        _log.Info(nameof(AlterarVersaoAsync), $"TGERLICENCA.VERSAO atualizado para '{novaVersao}' em '{ecoBankPath}'.");
+        return csb;
     }
 
     /// <inheritdoc/>

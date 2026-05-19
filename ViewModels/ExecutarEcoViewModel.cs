@@ -248,9 +248,15 @@ public class ExecutarEcoViewModel : ViewModelBase
                          && !string.IsNullOrEmpty(inst.ExecutavelNome))
                 {
                     var versaoBanco = ExtrairVersaoBancoRaw(inst.VersaoBanco);
+                    var majorBanco  = EcoVersionHelper.ExtrairMajor(inst.VersaoBanco);
                     var versaoExe   = ExtrairVersaoExeNome(inst.ExecutavelNome);
-                    inst.VersaoIncompativel = versaoBanco is not null && versaoExe is not null
-                        && !string.Equals(versaoBanco, versaoExe, StringComparison.OrdinalIgnoreCase);
+                    var majorExe    = EcoVersionHelper.ExtrairMajorExe(inst.ExecutavelNome);
+                    inst.VersaoIncompativel = versaoBanco is not null
+                        && majorBanco is not null
+                        && versaoExe is not null
+                        && majorExe is not null
+                        && (!string.Equals(versaoBanco, versaoExe, StringComparison.OrdinalIgnoreCase)
+                            || !string.Equals(majorBanco, majorExe, StringComparison.OrdinalIgnoreCase));
                 }
             }
         }
@@ -286,9 +292,15 @@ public class ExecutarEcoViewModel : ViewModelBase
                     if (job != null) VincularJobAInstancia(instancia, job);
 
                     var vBanco = ExtrairVersaoBancoRaw(instancia.VersaoBanco);
+                    var majorB = EcoVersionHelper.ExtrairMajor(instancia.VersaoBanco);
                     var vExe   = ExtrairVersaoExeNome(instancia.ExecutavelNome);
-                    instancia.VersaoIncompativel = vBanco is not null && vExe is not null
-                        && !string.Equals(vBanco, vExe, StringComparison.OrdinalIgnoreCase);
+                    var majorE = EcoVersionHelper.ExtrairMajorExe(instancia.ExecutavelNome);
+                    instancia.VersaoIncompativel = vBanco is not null
+                        && majorB is not null
+                        && vExe is not null
+                        && majorE is not null
+                        && (!string.Equals(vBanco, vExe, StringComparison.OrdinalIgnoreCase)
+                            || !string.Equals(majorB, majorE, StringComparison.OrdinalIgnoreCase));
 
                     await _instanceRepository.SalvarAsync(new List<EcoInstance>(Instancias));
                 },
@@ -338,9 +350,15 @@ public class ExecutarEcoViewModel : ViewModelBase
 
                     // Recalcula incompatibilidade com base na versão já armazenada
                     var vBanco = ExtrairVersaoBancoRaw(instanciaEditada.VersaoBanco);
+                    var majorB = EcoVersionHelper.ExtrairMajor(instanciaEditada.VersaoBanco);
                     var vExe   = ExtrairVersaoExeNome(instanciaEditada.ExecutavelNome);
-                    instanciaEditada.VersaoIncompativel = vBanco is not null && vExe is not null
-                        && !string.Equals(vBanco, vExe, StringComparison.OrdinalIgnoreCase);
+                    var majorE = EcoVersionHelper.ExtrairMajorExe(instanciaEditada.ExecutavelNome);
+                    instanciaEditada.VersaoIncompativel = vBanco is not null
+                        && majorB is not null
+                        && vExe is not null
+                        && majorE is not null
+                        && (!string.Equals(vBanco, vExe, StringComparison.OrdinalIgnoreCase)
+                            || !string.Equals(majorB, majorE, StringComparison.OrdinalIgnoreCase));
 
                     await _instanceRepository.SalvarAsync(new List<EcoInstance>(Instancias));
                 },
@@ -359,12 +377,28 @@ public class ExecutarEcoViewModel : ViewModelBase
 
     private async Task ExcluirInstanciaAsync(EcoInstance instancia)
     {
-        if (!_dialogService.Confirmar("Excluir instância", $"Excluir \"{instancia.Apelido}\"?", "Excluir"))
+        bool confirmar;
+        try
+        {
+            confirmar = _dialogService.Confirmar("Excluir instância", $"Excluir \"{instancia.Apelido}\"?", "Excluir");
+        }
+        catch (Exception ex)
+        {
+            _log.Error(nameof(ExcluirInstanciaAsync), ex);
+            _dialogService.Notificar("Não foi possível excluir",
+                $"Falha ao abrir a confirmação de exclusão.\n\n{ex.Message}");
             return;
+        }
+
+        if (!confirmar) return;
 
         _log.Info(nameof(ExcluirInstanciaAsync), $"Excluindo instância \"{instancia.Apelido}\" ({instancia.Id})");
 
         EncerrarProcessosDoExe(instancia.ExecutavelPath);
+        EncerrarProcessosTravandoArquivo(instancia.ExecutavelPath);
+        EncerrarProcessosTravandoArquivo(instancia.IniPath);
+
+        string? avisoArquivos = null;
 
         try
         {
@@ -373,21 +407,37 @@ public class ExecutarEcoViewModel : ViewModelBase
         catch (UnauthorizedAccessException ex)
         {
             _log.Error(nameof(ExcluirInstanciaAsync), ex);
-            _dialogService.Notificar("Não foi possível excluir",
-                "Acesso negado ao tentar excluir os arquivos da instância mesmo após encerrar os processos associados.\n\nVerifique manualmente se algum processo ainda está usando o arquivo.");
-            return;
+            avisoArquivos = "A instância será removida da lista, mas alguns arquivos não puderam ser excluídos (acesso negado).";
         }
         catch (Exception ex)
         {
             _log.Error(nameof(ExcluirInstanciaAsync), ex);
+            avisoArquivos = $"A instância será removida da lista, mas houve erro ao excluir arquivos:\n\n{ex.Message}";
+        }
+
+        var idxOriginal = Instancias.IndexOf(instancia);
+        if (idxOriginal < 0)
+            idxOriginal = Instancias.Count;
+
+        Instancias.Remove(instancia);
+
+        try
+        {
+            await _instanceRepository.SalvarAsync(new List<EcoInstance>(Instancias));
+        }
+        catch (Exception ex)
+        {
+            _log.Error(nameof(ExcluirInstanciaAsync), ex);
+            Instancias.Insert(Math.Min(idxOriginal, Instancias.Count), instancia);
             _dialogService.Notificar("Não foi possível excluir",
-                $"Erro ao excluir os arquivos da instância:\n\n{ex.Message}");
+                $"Falha ao salvar a remoção da instância.\n\n{ex.Message}");
             return;
         }
 
-        Instancias.Remove(instancia);
-        await _instanceRepository.SalvarAsync(new List<EcoInstance>(Instancias));
         _log.Info(nameof(ExcluirInstanciaAsync), $"Instância \"{instancia.Apelido}\" removida com sucesso.");
+
+        if (avisoArquivos is not null)
+            _dialogService.Notificar("Instância removida com aviso", avisoArquivos);
     }
 
     private void EncerrarProcessosDoExe(string exePath)
@@ -415,6 +465,27 @@ public class ExecutarEcoViewModel : ViewModelBase
         catch (Exception ex)
         {
             _log.Warn(nameof(EncerrarProcessosDoExe), $"Falha ao enumerar processos: {ex.Message}");
+        }
+    }
+
+    private void EncerrarProcessosTravandoArquivo(string path)
+    {
+        if (string.IsNullOrWhiteSpace(path) || !File.Exists(path)) return;
+
+        try
+        {
+            var travadores = _fileLockerService.ObterProcessosTravando(path);
+            foreach (var (processId, processName) in travadores)
+            {
+                _log.Info(nameof(EncerrarProcessosTravandoArquivo),
+                    $"Encerrando processo travando arquivo (PID={processId}, Nome={processName}, Arquivo={path})");
+                _fileLockerService.EncerrarProcesso(processId);
+            }
+        }
+        catch (Exception ex)
+        {
+            _log.Warn(nameof(EncerrarProcessosTravandoArquivo),
+                $"Falha ao encerrar processos travando '{path}': {ex.Message}");
         }
     }
 
@@ -502,13 +573,15 @@ public class ExecutarEcoViewModel : ViewModelBase
 
         var executaveis  = await _versionCatalogService.ListarExecutaveisAsync();
         var versaoBanco  = ExtrairVersaoBancoRaw(inst.VersaoBanco);
+        var major        = EcoVersionHelper.ExtrairMajor(inst.VersaoBanco);
 
         EcoExecutavel? melhorExe = null;
         if (versaoBanco is not null)
         {
             melhorExe = executaveis
-                .Where(e => string.Equals(ExtrairVersaoExeNome(e.NomeCompleto), versaoBanco, StringComparison.OrdinalIgnoreCase))
-                .OrderByDescending(e => e.NomeCompleto, StringComparer.OrdinalIgnoreCase)
+                .Where(e => string.Equals(EcoVersionHelper.ExtrairMajorExe(e.NomeCompleto), major, StringComparison.OrdinalIgnoreCase)
+                         && string.Equals(ExtrairVersaoExeNome(e.NomeCompleto), versaoBanco, StringComparison.OrdinalIgnoreCase))
+                .OrderByDescending(e => e.NumeroBuild, StringComparer.OrdinalIgnoreCase)
                 .FirstOrDefault();
         }
 
@@ -559,22 +632,18 @@ public class ExecutarEcoViewModel : ViewModelBase
 
     // "14650000" → "650"  (mesmo algoritmo do flyout)
     private static string? ExtrairVersaoBancoRaw(string raw)
-    {
-        if (raw.Length > 5 && raw.All(char.IsDigit))
-            return raw.Substring(2, raw.Length - 5);
-        return null;
-    }
+        => EcoVersionHelper.ExtrairVersao(raw);
 
     // "Eco_650_10" → "650"
+    // "Eco_15001_10" → "001"
     private static string? ExtrairVersaoExeNome(string nomeCompleto)
-    {
-        var partes = nomeCompleto.Split('_');
-        return partes.Length >= 2 ? partes[1] : null;
-    }
+        => EcoVersionHelper.ExtrairVersaoExeSemMajor(nomeCompleto);
 
     private async Task AtualizarVersaoBancoAsync(EcoInstance inst)
     {
-        var raw = await _databaseVersionService.ConsultarVersaoAsync(inst.BasePath);
+        var raw = await _databaseVersionService.ConsultarVersaoAsync(
+            inst.BasePath,
+            ObterPortaFirebird(inst.VersaoFirebird));
         if (raw is null)
         {
             _log.Warn(nameof(AtualizarVersaoBancoAsync), $"Não foi possível obter versão do banco para \"{inst.Apelido}\" ({inst.BasePath})");
@@ -584,14 +653,28 @@ public class ExecutarEcoViewModel : ViewModelBase
         inst.VersaoBanco = raw;
 
         var versaoBanco = ExtrairVersaoBancoRaw(raw);
+        var majorBanco  = EcoVersionHelper.ExtrairMajor(raw);
         var versaoExe   = ExtrairVersaoExeNome(inst.ExecutavelNome);
-        inst.VersaoIncompativel = versaoBanco is not null && versaoExe is not null
-            && !string.Equals(versaoBanco, versaoExe, StringComparison.OrdinalIgnoreCase);
+        var majorExe    = EcoVersionHelper.ExtrairMajorExe(inst.ExecutavelNome);
+        inst.VersaoIncompativel = versaoBanco is not null
+            && majorBanco is not null
+            && versaoExe is not null
+            && majorExe is not null
+            && (!string.Equals(versaoBanco, versaoExe, StringComparison.OrdinalIgnoreCase)
+                || !string.Equals(majorBanco, majorExe, StringComparison.OrdinalIgnoreCase));
 
         _log.Info(nameof(AtualizarVersaoBancoAsync),
-            $"Versão do banco \"{inst.Apelido}\": raw={raw}, extraída={versaoBanco ?? "n/a"}, exe={versaoExe ?? "n/a"}, incompatível={inst.VersaoIncompativel}");
+            $"Versão do banco \"{inst.Apelido}\": raw={raw}, major={majorBanco ?? "n/a"}, versão={versaoBanco ?? "n/a"}, exeMajor={majorExe ?? "n/a"}, exeVersao={versaoExe ?? "n/a"}, incompatível={inst.VersaoIncompativel}");
 
         await _instanceRepository.SalvarAsync(new List<EcoInstance>(Instancias));
+    }
+
+    private string ObterPortaFirebird(string versaoFirebird)
+    {
+        var settings = _userSettingsService.Settings;
+        return string.Equals(versaoFirebird, "2.5", StringComparison.Ordinal)
+            ? settings.PortaFirebird25
+            : settings.PortaFirebird50;
     }
 
     private bool FiltrarInstancia(EcoInstance inst)

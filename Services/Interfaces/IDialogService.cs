@@ -6,5 +6,5 @@ public interface IDialogService
     void    Notificar(string titulo, string mensagem);
     string? SelecionarArquivo(string titulo, string filtro);
     string? SolicitarTexto(string titulo, string mensagem, string valorInicial = "");
-    (string Versao, string Build)? SolicitarVersaoBuild();
+    (string Major, string Versao, string Build)? SolicitarVersaoBuild();
 }

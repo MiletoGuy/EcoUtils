@@ -51,8 +51,23 @@ public class InstanceFlyoutViewModel : ViewModelBase
         _apelidosExistentes.Contains(Apelido.Trim(), StringComparer.OrdinalIgnoreCase);
 
     public ObservableCollection<EcoExecutavel> Executaveis            { get; } = new();
+    public ObservableCollection<string>        MajorsSelecionaveis    { get; } = new();
     public ObservableCollection<string>        VersoesSelecionaveis   { get; } = new();
     public ObservableCollection<EcoExecutavel> BuildsSelecionaveis    { get; } = new();
+
+    private string? _majorSelecionado;
+    public string? MajorSelecionado
+    {
+        get => _majorSelecionado;
+        set
+        {
+            if (!SetProperty(ref _majorSelecionado, value)) return;
+            VersaoSelecionada = null;
+            AtualizarVersoesSelecionaveis();
+            OnPropertyChanged(nameof(PodeSelecionarVersao));
+            OnPropertyChanged(nameof(PodeSelecionarBuild));
+        }
+    }
 
     private string? _versaoSelecionada;
     public string? VersaoSelecionada
@@ -66,11 +81,33 @@ public class InstanceFlyoutViewModel : ViewModelBase
         }
     }
 
+    public bool PodeSelecionarVersao => _majorSelecionado is not null && !_isImportandoExe;
+
+    private void AtualizarMajorsSelecionaveis()
+    {
+        MajorsSelecionaveis.Clear();
+        foreach (var m in Executaveis
+            .Select(e => EcoVersionHelper.ExtrairMajorExe(e.NomeCompleto))
+            .Where(m => m is not null)
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .OrderBy(m => m, StringComparer.OrdinalIgnoreCase))
+            MajorsSelecionaveis.Add(EcoVersionHelper.FormatarMajor(m!));
+
+        if (_majorSelecionado is null && MajorsSelecionaveis.Count > 0)
+            MajorSelecionado = MajorsSelecionaveis[0];
+    }
+
     private void AtualizarVersoesSelecionaveis()
     {
         VersoesSelecionaveis.Clear();
+        if (_majorSelecionado is null) return;
+
+        var majorCompacto = EcoVersionHelper.NormalizarMajorInput(_majorSelecionado);
+        if (majorCompacto is null) return;
+
         foreach (var v in Executaveis
-            .Select(e => ExtrairVersaoExe(e.NomeCompleto))
+            .Where(e => string.Equals(EcoVersionHelper.ExtrairMajorExe(e.NomeCompleto), majorCompacto, StringComparison.OrdinalIgnoreCase))
+            .Select(e => EcoVersionHelper.ExtrairVersaoExeSemMajor(e.NomeCompleto))
             .Where(v => v is not null)
             .Distinct(StringComparer.OrdinalIgnoreCase)
             .OrderBy(v => v, StringComparer.OrdinalIgnoreCase))
@@ -81,9 +118,14 @@ public class InstanceFlyoutViewModel : ViewModelBase
     private void RecalcularBuilds()
     {
         BuildsSelecionaveis.Clear();
-        if (_versaoSelecionada is null) return;
+        if (_versaoSelecionada is null || _majorSelecionado is null) return;
+
+        var majorCompacto = EcoVersionHelper.NormalizarMajorInput(_majorSelecionado);
+        if (majorCompacto is null) return;
+
         foreach (var exe in Executaveis.Where(e =>
-            string.Equals(ExtrairVersaoExe(e.NomeCompleto), _versaoSelecionada, StringComparison.OrdinalIgnoreCase)))
+            string.Equals(EcoVersionHelper.ExtrairMajorExe(e.NomeCompleto), majorCompacto, StringComparison.OrdinalIgnoreCase)
+            && string.Equals(EcoVersionHelper.ExtrairVersaoExeSemMajor(e.NomeCompleto), _versaoSelecionada, StringComparison.OrdinalIgnoreCase)))
             BuildsSelecionaveis.Add(exe);
     }
 
@@ -234,13 +276,14 @@ public class InstanceFlyoutViewModel : ViewModelBase
         {
             SetProperty(ref _isImportandoExe, value);
             OnPropertyChanged(nameof(NaoImportandoExe));
+            OnPropertyChanged(nameof(PodeSelecionarVersao));
             OnPropertyChanged(nameof(PodeSelecionarBuild));
             ConfirmarCommand.RaiseCanExecuteChanged();
         }
     }
 
     public bool NaoImportandoExe    => !_isImportandoExe;
-    public bool PodeSelecionarBuild  => _versaoSelecionada is not null && !_isImportandoExe;
+    public bool PodeSelecionarBuild  => _versaoSelecionada is not null && _majorSelecionado is not null && !_isImportandoExe;
 
     private int _progressoExe;
     public int ProgressoExe
@@ -516,6 +559,7 @@ public class InstanceFlyoutViewModel : ViewModelBase
         });
 
         Executaveis.CollectionChanged += (_, _) => AtualizarVersoesSelecionaveis();
+        Executaveis.CollectionChanged += (_, _) => AtualizarMajorsSelecionaveis();
 
         RestaurarVersaoOriginalCommand = new AsyncRelayCommand(
             async _ => await RestaurarVersaoOriginalAsync(),
@@ -534,11 +578,17 @@ public class InstanceFlyoutViewModel : ViewModelBase
             foreach (var exe   in exes)   Executaveis.Add(exe);
             foreach (var banco in bancos) Bancos.Add(banco);
 
+            AtualizarMajorsSelecionaveis();
+
             if (_instanciaExistente is not null)
             {
                 var exeParaSelecionar = Executaveis.FirstOrDefault(e => e.ExePath == _instanciaExistente.ExecutavelFontePath);
                 if (exeParaSelecionar is not null)
-                    VersaoSelecionada = ExtrairVersaoExe(exeParaSelecionar.NomeCompleto);
+                {
+                    var major = EcoVersionHelper.ExtrairMajorExe(exeParaSelecionar.NomeCompleto);
+                    MajorSelecionado = major is not null ? EcoVersionHelper.FormatarMajor(major) : null;
+                    VersaoSelecionada = EcoVersionHelper.ExtrairVersaoExeSemMajor(exeParaSelecionar.NomeCompleto);
+                }
                 ExecutavelSelecionado = exeParaSelecionar;
                 BancoSelecionado      = Bancos.FirstOrDefault(b => string.Equals(b.EcoPath, _instanciaExistente.BasePath, StringComparison.OrdinalIgnoreCase));
 
@@ -609,7 +659,9 @@ public class InstanceFlyoutViewModel : ViewModelBase
             return;
         }
 
-        var versaoBancoRaw = await _databaseVersionService.ConsultarVersaoAsync(BancoSelecionado.EcoPath);
+        var versaoBancoRaw = await _databaseVersionService.ConsultarVersaoAsync(
+            BancoSelecionado.EcoPath,
+            ObterPortaFirebirdAtual());
         _versaoBancoRaw = versaoBancoRaw;
 
         if (versaoBancoRaw is null)
@@ -618,15 +670,26 @@ public class InstanceFlyoutViewModel : ViewModelBase
         }
         else
         {
-            var versao = ExtrairVersaoBanco(versaoBancoRaw);
-            StatusBancoVersao = versao is not null
-                ? $"Versão {versao}"
+            var versaoFormatada = EcoVersionHelper.FormatarVersao(versaoBancoRaw);
+            StatusBancoVersao = versaoFormatada is not null
+                ? $"Versão {versaoFormatada}"
                 : $"Versão: {versaoBancoRaw}";
         }
 
         AtualizarCompatibilidade();
         OnPropertyChanged(nameof(PodeUsarVersaoExecutavel));
         OnPropertyChanged(nameof(PodeAlterarUsarVersaoExecutavel));
+    }
+
+    private string ObterPortaFirebirdAtual()
+        => ObterPortaFirebird(VersaoFirebird);
+
+    private string ObterPortaFirebird(string versaoFirebird)
+    {
+        var settings = _userSettingsService.Settings;
+        return string.Equals(versaoFirebird, "2.5", StringComparison.Ordinal)
+            ? settings.PortaFirebird25
+            : settings.PortaFirebird50;
     }
 
     private void AtualizarCompatibilidade()
@@ -638,36 +701,31 @@ public class InstanceFlyoutViewModel : ViewModelBase
             return;
         }
 
-        var versaoBanco = ExtrairVersaoBanco(_versaoBancoRaw);
-        var versaoExe   = ExtrairVersaoExe(ExecutavelSelecionado.NomeCompleto);
+        var versaoBanco = EcoVersionHelper.ExtrairVersao(_versaoBancoRaw);
+        var majorBanco  = EcoVersionHelper.ExtrairMajor(_versaoBancoRaw);
+        var majorExe    = EcoVersionHelper.ExtrairMajorExe(ExecutavelSelecionado.NomeCompleto);
+        var versaoExe   = EcoVersionHelper.ExtrairVersaoExeSemMajor(ExecutavelSelecionado.NomeCompleto);
 
-        if (versaoBanco is null || versaoExe is null)
+        if (versaoBanco is null || majorBanco is null || majorExe is null || string.IsNullOrEmpty(versaoExe))
         {
             StatusVersao     = $"Formato de versão não reconhecido para comparação.";
             VersaoCompativel = null;
             return;
         }
 
-        VersaoCompativel = string.Equals(versaoBanco, versaoExe, StringComparison.Ordinal);
+        var majorIgual  = string.Equals(majorBanco, majorExe, StringComparison.OrdinalIgnoreCase);
+        var versaoIgual = string.Equals(versaoBanco, versaoExe, StringComparison.OrdinalIgnoreCase);
+        VersaoCompativel = majorIgual && versaoIgual;
+        var versaoDisplay = EcoVersionHelper.FormatarVersao(_versaoBancoRaw) ?? versaoBanco;
+        var exeDisplay = $"{EcoVersionHelper.FormatarMajor(majorExe)}.{versaoExe}";
         StatusVersao = VersaoCompativel == true
-            ? $"Versão {versaoExe} — banco e executável compatíveis."
-            : $"Incompatibilidade: banco v{versaoBanco} × executável v{versaoExe}.";
+            ? $"Versão {versaoDisplay} — banco e executável compatíveis."
+            : $"Incompatibilidade: banco v{versaoDisplay} × executável v{exeDisplay}.";
     }
 
     // "14650000" → "650"  (ignora os 2 primeiros dígitos do major e os 3 últimos do patch)
     private static string? ExtrairVersaoBanco(string versaoBancoRaw)
-    {
-        if (versaoBancoRaw.Length > 5 && versaoBancoRaw.All(char.IsDigit))
-            return versaoBancoRaw.Substring(2, versaoBancoRaw.Length - 5);
-        return null;
-    }
-
-    // "Eco_650_10" → "650"  (primeiro segmento numérico após "Eco_")
-    private static string? ExtrairVersaoExe(string nomeCompleto)
-    {
-        var partes = nomeCompleto.Split('_');
-        return partes.Length >= 2 ? partes[1] : null;
-    }
+        => EcoVersionHelper.ExtrairVersao(versaoBancoRaw);
 
     private async System.Threading.Tasks.Task AtualizarStatusIniAsync()
     {
@@ -890,7 +948,21 @@ public class InstanceFlyoutViewModel : ViewModelBase
             var versaoBuild = _dialogService.SolicitarVersaoBuild();
             if (versaoBuild is null) return;
 
-            var nomeExe    = $"Eco_{versaoBuild.Value.Versao}_{versaoBuild.Value.Build}.exe";
+            var majorCompacto = EcoVersionHelper.NormalizarMajorInput(versaoBuild.Value.Major);
+            if (majorCompacto is null)
+            {
+                ErroImportacaoExe = "Major inválida. Use formato 1.4, 1.5, 14 ou 15.";
+                return;
+            }
+
+            var segmentoVersao = EcoVersionHelper.ConstruirSegmentoVersaoExe(majorCompacto, versaoBuild.Value.Versao);
+            if (segmentoVersao is null)
+            {
+                ErroImportacaoExe = "Não foi possível montar a versão do executável com a major informada.";
+                return;
+            }
+
+            var nomeExe    = $"Eco_{segmentoVersao}_{versaoBuild.Value.Build}.exe";
             var destinoExe = System.IO.Path.Combine(EcoPathConstants.UtilsDir, nomeExe);
 
             bool substituir = false;
@@ -910,7 +982,7 @@ public class InstanceFlyoutViewModel : ViewModelBase
 
             var novoExe = await _executableImportService.InstalarExecutavelAsync(
                 resultado.ArquivoPath!,
-                versaoBuild.Value.Versao,
+                segmentoVersao,
                 versaoBuild.Value.Build,
                 substituir);
 
@@ -935,7 +1007,8 @@ public class InstanceFlyoutViewModel : ViewModelBase
                 Executaveis.Add(novoExe);
             }
 
-            VersaoSelecionada     = ExtrairVersaoExe(novoExe.NomeCompleto);
+            MajorSelecionado      = EcoVersionHelper.FormatarMajor(majorCompacto);
+            VersaoSelecionada     = EcoVersionHelper.ExtrairVersaoExeSemMajor(novoExe.NomeCompleto);
             ExecutavelSelecionado = novoExe;
         }
         catch (Exception ex)
@@ -1055,7 +1128,10 @@ public class InstanceFlyoutViewModel : ViewModelBase
                     ? _instanciaExistente.VersaoBancoOriginal
                     : _versaoBancoRaw;
 
-                await _databaseVersionService.AlterarVersaoAsync(BancoSelecionado!.EcoPath, novaVersaoDB);
+                await _databaseVersionService.AlterarVersaoAsync(
+                    BancoSelecionado!.EcoPath,
+                    novaVersaoDB,
+                    porta);
                 versaoBancoFinal = novaVersaoDB;
                 _log.Info(nameof(ConfirmarAsync), $"Versão do banco forçada para '{novaVersaoDB}' (original: '{versaoBancoOriginal}') em '{BancoSelecionado.EcoPath}'.");
             }
@@ -1112,7 +1188,8 @@ public class InstanceFlyoutViewModel : ViewModelBase
         {
             await _databaseVersionService.AlterarVersaoAsync(
                 _instanciaExistente.BasePath,
-                _instanciaExistente.VersaoBancoOriginal);
+                _instanciaExistente.VersaoBancoOriginal,
+                ObterPortaFirebird(_instanciaExistente.VersaoFirebird));
 
             _log.Info(nameof(RestaurarVersaoOriginalAsync),
                 $"Versão original '{_instanciaExistente.VersaoBancoOriginal}' restaurada em '{_instanciaExistente.BasePath}'.");
@@ -1144,7 +1221,7 @@ public class InstanceFlyoutViewModel : ViewModelBase
 
             _versaoBancoRaw          = versaoRestaurada;
             UsarVersaoExecutavel     = false;
-            var v = ExtrairVersaoBanco(versaoRestaurada);
+            var v = EcoVersionHelper.FormatarVersao(versaoRestaurada);
             StatusBancoVersao        = v is not null ? $"Versão {v}" : $"Versão: {versaoRestaurada}";
 
             AtualizarCompatibilidade();
@@ -1159,15 +1236,10 @@ public class InstanceFlyoutViewModel : ViewModelBase
     }
 
     // "14650000" + "651" → "14651000"  (substitui os dígitos do meio)
+    // "15001000" + "15002" → "15002000"  (strip do prefixo major embutido no nome do exe)
     private static string? ConstruirVersaoDBComExe(string versaoBancoRaw, string versaoExe)
-    {
-        if (versaoBancoRaw.Length > 5 && versaoBancoRaw.All(char.IsDigit))
-        {
-            int midLen = versaoBancoRaw.Length - 5;
-            string prefix = versaoBancoRaw.Substring(0, 2);
-            string suffix = versaoBancoRaw.Substring(versaoBancoRaw.Length - 3);
-            return prefix + versaoExe.PadLeft(midLen, '0') + suffix;
-        }
-        return null;
-    }
+        => EcoVersionHelper.ConstruirVersaoDBComExe(versaoBancoRaw, versaoExe);
+
+    private static string? ExtrairVersaoExe(string nomeCompleto)
+        => EcoVersionHelper.ExtrairSegmentoVersaoExe(nomeCompleto);
 }

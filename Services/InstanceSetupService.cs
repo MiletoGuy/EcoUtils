@@ -1,5 +1,6 @@
 using System.IO;
 using System.Text.RegularExpressions;
+using System.Threading;
 using EcoUtils.Infrastructure;
 using EcoUtils.Models;
 using EcoUtils.Services.Interfaces;
@@ -10,6 +11,10 @@ public class InstanceSetupService : IInstanceSetupService
 {
     private static readonly Regex _implantadoRegex =
         new(@"^eco_[^_]+_[^_]+_\d+\.(exe|ini)$",
+            RegexOptions.IgnoreCase | RegexOptions.Compiled);
+
+    private static readonly Regex _legadoRegex =
+        new(@"^Eco_[^_]+_[^_]+\.(exe|ini)$",
             RegexOptions.IgnoreCase | RegexOptions.Compiled);
 
     public async Task<(string ExePath, string IniPath)> ImplantarAsync(
@@ -386,8 +391,42 @@ public class InstanceSetupService : IInstanceSetupService
     {
         if (string.IsNullOrWhiteSpace(path))       return;
         if (!File.Exists(path))                    return;
-        if (!_implantadoRegex.IsMatch(Path.GetFileName(path))) return;
 
+        var fileName = Path.GetFileName(path);
+        var fullPath  = Path.GetFullPath(path);
+
+        bool gerenciadoPeloUtils =
+            fullPath.StartsWith(Path.GetFullPath(EcoPathConstants.WindowsDir), StringComparison.OrdinalIgnoreCase) ||
+            fullPath.StartsWith(Path.GetFullPath(EcoPathConstants.UtilsDir),    StringComparison.OrdinalIgnoreCase);
+
+        if (!gerenciadoPeloUtils) return;
+
+        if (!_implantadoRegex.IsMatch(fileName) && !_legadoRegex.IsMatch(fileName)) return;
+
+        // Arquivos vindos de pacote/extração podem carregar atributo ReadOnly.
+        var attrs = File.GetAttributes(path);
+        if ((attrs & FileAttributes.ReadOnly) != 0)
+            File.SetAttributes(path, attrs & ~FileAttributes.ReadOnly);
+
+        const int tentativas = 3;
+        for (int i = 1; i <= tentativas; i++)
+        {
+            try
+            {
+                File.Delete(path);
+                return;
+            }
+            catch (IOException) when (i < tentativas)
+            {
+                Thread.Sleep(120);
+            }
+            catch (UnauthorizedAccessException) when (i < tentativas)
+            {
+                Thread.Sleep(120);
+            }
+        }
+
+        // Última tentativa sem captura para preservar o comportamento de erro ao chamador.
         File.Delete(path);
     }
 

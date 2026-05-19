@@ -16,6 +16,13 @@
                        FontSize="15"
                        Margin="0,0,0,10"/>
 
+            <TextBlock Text="Major"
+                       Foreground="{StaticResource TextSecondary}"
+                       Margin="0,0,0,4"/>
+            <TextBox x:Name="MajorBox"
+                     Margin="0,0,0,12"
+                     KeyDown="OnKeyDown"/>
+
             <TextBlock Text="Versão"
                        Foreground="{StaticResource TextSecondary}"
                        Margin="0,0,0,4"/>

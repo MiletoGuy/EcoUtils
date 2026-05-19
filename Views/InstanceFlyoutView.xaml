@@ -136,36 +136,49 @@
             <Grid.RowDefinitions>
                 <RowDefinition/>
                 <RowDefinition/>
+                <RowDefinition/>
             </Grid.RowDefinitions>
 
             <!-- Labels -->
             <TextBlock Grid.Row="0" Grid.Column="0"
-                       Text="Versão"
+                       Text="Major"
                        Foreground="{StaticResource TextPrimary}"
                        VerticalAlignment="Center"
                        Margin="0,0,8,4"/>
             <TextBlock Grid.Row="1" Grid.Column="0"
+                       Text="Versão"
+                       Foreground="{StaticResource TextPrimary}"
+                       VerticalAlignment="Center"
+                       Margin="0,0,8,4"/>
+            <TextBlock Grid.Row="2" Grid.Column="0"
                        Text="Build"
                        Foreground="{StaticResource TextPrimary}"
                        VerticalAlignment="Center"
                        Margin="0,0,8,0"/>
 
-            <!-- ComboBox de versão -->
+            <!-- ComboBox de major -->
             <ComboBox Grid.Row="0" Grid.Column="1"
-                      ItemsSource="{Binding VersoesSelecionaveis}"
-                      SelectedItem="{Binding VersaoSelecionada}"
+                      ItemsSource="{Binding MajorsSelecionaveis}"
+                      SelectedItem="{Binding MajorSelecionado}"
                       IsEnabled="{Binding NaoImportandoExe}"
                       Margin="0,0,0,4"/>
 
-            <!-- ComboBox de build -->
+            <!-- ComboBox de versão -->
             <ComboBox Grid.Row="1" Grid.Column="1"
+                      ItemsSource="{Binding VersoesSelecionaveis}"
+                      SelectedItem="{Binding VersaoSelecionada}"
+                      IsEnabled="{Binding PodeSelecionarVersao}"
+                      Margin="0,0,0,4"/>
+
+            <!-- ComboBox de build -->
+            <ComboBox Grid.Row="2" Grid.Column="1"
                       ItemsSource="{Binding BuildsSelecionaveis}"
                       SelectedItem="{Binding ExecutavelSelecionado}"
                       DisplayMemberPath="NumeroBuild"
                       IsEnabled="{Binding PodeSelecionarBuild}"/>
 
-            <!-- Botão importar (alinhado ao centro vertical das duas linhas) -->
-            <Button Grid.Row="0" Grid.RowSpan="2" Grid.Column="2"
+            <!-- Botão importar (alinhado ao centro vertical das três linhas) -->
+            <Button Grid.Row="0" Grid.RowSpan="3" Grid.Column="2"
                     Content="+"
                     Style="{StaticResource ButtonPrimary}"
                     Command="{Binding AdicionarExeCommand}"
@@ -195,7 +208,7 @@
                    TextWrapping="Wrap"
                    Margin="0,0,0,4"
                    Visibility="{Binding AguardandoExeAutoSelecionado, Converter={StaticResource BoolToVisibility}}"
-                   Text="O executável compatível com a maior build disponível será selecionado automaticamente ao término da restauração."/>
+                   Text="O executável compatível com major e versão da base será selecionado automaticamente ao término da restauração (maior build disponível)."/>
 
         <!-- Erro de importação de executável -->
         <TextBlock Text="{Binding ErroImportacaoExe}"
