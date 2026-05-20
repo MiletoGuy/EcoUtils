@@ -14,6 +14,14 @@ public class MainViewModel : ViewModelBase
     private readonly IUpdateService _updateService;
     private UpdateInfo? _updateDisponivel;
 
+    private static string MontarMensagemInline(string resumo, string proximoPasso, string? detalhe = null)
+    {
+        if (string.IsNullOrWhiteSpace(detalhe))
+            return $"{resumo} {proximoPasso}";
+
+        return $"{resumo} {proximoPasso} Detalhe: {detalhe}";
+    }
+
     public ObservableCollection<NavItem> Abas { get; }
 
     private NavItem? _abaAtiva;
@@ -73,6 +81,26 @@ public class MainViewModel : ViewModelBase
     public ICommand DepoisCommand          { get; }
     public ICommand AbrirFlyoutUpdateCommand { get; }
 
+    private string? _mensagemUpdateFluxo;
+    public string? MensagemUpdateFluxo
+    {
+        get => _mensagemUpdateFluxo;
+        private set
+        {
+            SetProperty(ref _mensagemUpdateFluxo, value);
+            OnPropertyChanged(nameof(TemMensagemUpdateFluxo));
+        }
+    }
+
+    public bool TemMensagemUpdateFluxo => !string.IsNullOrWhiteSpace(MensagemUpdateFluxo);
+
+    private bool _mensagemUpdateErro;
+    public bool MensagemUpdateErro
+    {
+        get => _mensagemUpdateErro;
+        private set => SetProperty(ref _mensagemUpdateErro, value);
+    }
+
     public MainViewModel(ExecutarEcoViewModel executarEcoVm, IUserSettingsService userSettingsService, IUpdateService updateService, IDialogService dialogService, IInstanceRepository instanceRepository, IInstanceSetupService instanceSetupService, ILogService log)
     {
         _updateService = updateService;
@@ -109,15 +137,31 @@ public class MainViewModel : ViewModelBase
     private async Task VerificarAtualizacaoAsync()
     {
         Estado = EstadoUpdate.Verificando;
-        _updateDisponivel = await _updateService.VerificarAtualizacaoAsync();
-        Estado = _updateDisponivel is not null
-            ? EstadoUpdate.AtualizacaoDisponivel
-            : EstadoUpdate.SemAtualizacao;
+        MensagemUpdateFluxo = null;
+        MensagemUpdateErro = false;
 
-        VersaoNova = _updateDisponivel?.Versao ?? string.Empty;
+        try
+        {
+            _updateDisponivel = await _updateService.VerificarAtualizacaoAsync();
+            Estado = _updateDisponivel is not null
+                ? EstadoUpdate.AtualizacaoDisponivel
+                : EstadoUpdate.SemAtualizacao;
 
-        if (_updateDisponivel is not null)
-            FlyoutUpdateAberto = true;
+            VersaoNova = _updateDisponivel?.Versao ?? string.Empty;
+
+            if (_updateDisponivel is not null)
+                FlyoutUpdateAberto = true;
+        }
+        catch (Exception ex)
+        {
+            _updateDisponivel = null;
+            Estado = EstadoUpdate.SemAtualizacao;
+            MensagemUpdateErro = false;
+            MensagemUpdateFluxo = MontarMensagemInline(
+                "Não foi possível verificar atualizações agora.",
+                "Tente novamente mais tarde ou abra Configurações > Geral.",
+                ex.Message);
+        }
     }
 
     private async Task ExecutarAtualizacaoAsync()
@@ -125,6 +169,22 @@ public class MainViewModel : ViewModelBase
         if (_updateDisponivel is null) return;
         FlyoutUpdateAberto = false;
         Estado = EstadoUpdate.Atualizando;
-        await _updateService.AtualizarAsync(_updateDisponivel);
+        MensagemUpdateFluxo = null;
+        MensagemUpdateErro = false;
+
+        try
+        {
+            await _updateService.AtualizarAsync(_updateDisponivel);
+        }
+        catch (Exception ex)
+        {
+            Estado = EstadoUpdate.AtualizacaoDisponivel;
+            MensagemUpdateErro = true;
+            MensagemUpdateFluxo = MontarMensagemInline(
+                "Não foi possível concluir a atualização.",
+                "Verifique sua conexão e tente novamente.",
+                ex.Message);
+            FlyoutUpdateAberto = true;
+        }
     }
 }

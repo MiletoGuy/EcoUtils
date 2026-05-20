@@ -481,6 +481,61 @@
     </Style>
 
     <!-- ═══════════════════════════════════════════════
+         RadioButton
+    ═══════════════════════════════════════════════ -->
+    <Style TargetType="RadioButton">
+        <Setter Property="Foreground"  Value="{StaticResource TextPrimary}"/>
+        <Setter Property="FontFamily"  Value="{StaticResource FontBase}"/>
+        <Setter Property="FontSize"    Value="{StaticResource FontSizeBase}"/>
+        <Setter Property="Cursor"      Value="Hand"/>
+        <Setter Property="VerticalContentAlignment" Value="Center"/>
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="RadioButton">
+                    <StackPanel Orientation="Horizontal" Background="Transparent">
+                        <!-- Círculo externo -->
+                        <Border x:Name="Circle"
+                                Width="14" Height="14"
+                                Background="{StaticResource InputBackground}"
+                                BorderBrush="{StaticResource InputBorder}"
+                                BorderThickness="1"
+                                CornerRadius="7"
+                                VerticalAlignment="Center">
+                            <!-- Ponto interno -->
+                            <Border x:Name="Dot"
+                                    Width="6" Height="6"
+                                    Background="{StaticResource TextPrimary}"
+                                    CornerRadius="3"
+                                    HorizontalAlignment="Center"
+                                    VerticalAlignment="Center"
+                                    Visibility="Collapsed"/>
+                        </Border>
+                        <!-- Label -->
+                        <ContentPresenter Margin="7,0,0,0"
+                                          VerticalAlignment="Center"
+                                          RecognizesAccessKey="True"/>
+                    </StackPanel>
+                    <ControlTemplate.Triggers>
+                        <Trigger Property="IsChecked" Value="True">
+                            <Setter TargetName="Circle" Property="Background"  Value="{StaticResource ButtonPrimaryBackground}"/>
+                            <Setter TargetName="Circle" Property="BorderBrush" Value="{StaticResource ButtonPrimaryBackground}"/>
+                            <Setter TargetName="Dot"    Property="Visibility"  Value="Visible"/>
+                            <Setter TargetName="Dot"    Property="Background"  Value="{StaticResource AppBackground}"/>
+                        </Trigger>
+                        <Trigger Property="IsMouseOver" Value="True">
+                            <Setter TargetName="Circle" Property="BorderBrush" Value="{StaticResource InputBorderFocus}"/>
+                        </Trigger>
+                        <Trigger Property="IsEnabled" Value="False">
+                            <Setter Property="Foreground" Value="{StaticResource TextDisabled}"/>
+                            <Setter TargetName="Circle"  Property="Opacity"   Value="0.4"/>
+                        </Trigger>
+                    </ControlTemplate.Triggers>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+
+    <!-- ═══════════════════════════════════════════════
          ContextMenu / MenuItem
     ═══════════════════════════════════════════════ -->
     <Style TargetType="ContextMenu">

@@ -53,4 +53,7 @@ public class RestoreJobEntry : INotifyPropertyChanged
 
     // ── Controle de cancelamento ─────────────────────────────────────
     public CancellationTokenSource Cts { get; } = new();
+
+    internal TaskCompletionSource Finalizacao { get; } =
+        new(TaskCreationOptions.RunContinuationsAsynchronously);
 }

@@ -4,5 +4,5 @@ namespace EcoUtils.Services.Interfaces;
 
 public interface IDatabaseDiscoveryService
 {
-    Task<IReadOnlyList<EcoDatabase>> ListarBancosAsync();
+    Task<CollectionLoadResult<EcoDatabase>> ListarBancosAsync();
 }

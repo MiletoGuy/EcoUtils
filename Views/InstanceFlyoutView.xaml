@@ -48,6 +48,22 @@
                     Margin="4,0,0,0"
                     ToolTip="Importar banco de dados"/>
         </Grid>
+        <TextBlock Text="{Binding StatusCarregamentoBancos}"
+                   FontSize="11"
+                   TextWrapping="Wrap"
+                   Margin="0,0,0,8"
+                   Visibility="{Binding TemStatusCarregamentoBancos, Converter={StaticResource BoolToVisibility}}">
+            <TextBlock.Style>
+                <Style TargetType="TextBlock">
+                    <Setter Property="Foreground" Value="{StaticResource StatusWarning}"/>
+                    <Style.Triggers>
+                        <DataTrigger Binding="{Binding FalhaCarregamentoBancos}" Value="True">
+                            <Setter Property="Foreground" Value="{StaticResource StatusError}"/>
+                        </DataTrigger>
+                    </Style.Triggers>
+                </Style>
+            </TextBlock.Style>
+        </TextBlock>
 
         <!-- Progresso de importação -->
         <StackPanel Visibility="{Binding IsImportandoBanco, Converter={StaticResource BoolToVisibility}}"
@@ -123,6 +139,18 @@
             </DockPanel>
         </Border>
 
+        <!-- Versão do Firebird -->
+        <TextBlock Text="Versão do Firebird"
+                   Foreground="{StaticResource TextSecondary}"
+                   Margin="0,0,0,6"/>
+        <StackPanel Orientation="Horizontal" Margin="0,0,0,12">
+            <RadioButton Content="Firebird 2.5"
+                         IsChecked="{Binding VersaoFirebird25, Mode=TwoWay}"
+                         Margin="0,0,16,0"/>
+            <RadioButton Content="Firebird 5.0"
+                         IsChecked="{Binding VersaoFirebird50, Mode=TwoWay}"/>
+        </StackPanel>
+
         <!-- Executável ECO -->
         <TextBlock Text="Executável ECO"
                    Foreground="{StaticResource TextSecondary}"
@@ -189,6 +217,22 @@
                     VerticalAlignment="Center"
                     ToolTip="Importar executável ECO"/>
         </Grid>
+        <TextBlock Text="{Binding StatusCarregamentoExecutaveis}"
+                   FontSize="11"
+                   TextWrapping="Wrap"
+                   Margin="0,0,0,6"
+                   Visibility="{Binding TemStatusCarregamentoExecutaveis, Converter={StaticResource BoolToVisibility}}">
+            <TextBlock.Style>
+                <Style TargetType="TextBlock">
+                    <Setter Property="Foreground" Value="{StaticResource StatusWarning}"/>
+                    <Style.Triggers>
+                        <DataTrigger Binding="{Binding FalhaCarregamentoExecutaveis}" Value="True">
+                            <Setter Property="Foreground" Value="{StaticResource StatusError}"/>
+                        </DataTrigger>
+                    </Style.Triggers>
+                </Style>
+            </TextBlock.Style>
+        </TextBlock>
 
         <!-- Progresso de importação de executável -->
         <StackPanel Visibility="{Binding IsImportandoExe, Converter={StaticResource BoolToVisibility}}"
@@ -272,20 +316,6 @@
                 Margin="0,4,0,16"
                 Command="{Binding RestaurarVersaoOriginalCommand}"
                 Visibility="{Binding PodeRestaurarVersaoOriginal, Converter={StaticResource BoolToVisibility}}"/>
-
-        <!-- Versão do Firebird -->
-        <TextBlock Text="Versão do Firebird"
-                   Foreground="{StaticResource TextSecondary}"
-                   Margin="0,12,0,6"/>
-        <StackPanel Orientation="Horizontal" Margin="0,0,0,16">
-            <RadioButton Content="Firebird 2.5"
-                         IsChecked="{Binding VersaoFirebird25, Mode=TwoWay}"
-                         Foreground="{StaticResource TextPrimary}"
-                         Margin="0,0,16,0"/>
-            <RadioButton Content="Firebird 5.0"
-                         IsChecked="{Binding VersaoFirebird50, Mode=TwoWay}"
-                         Foreground="{StaticResource TextPrimary}"/>
-        </StackPanel>
 
         <!-- Configurações do .ini — cabeçalho colapsável -->
         <Button Command="{Binding ToggleIniExpandedCommand}"

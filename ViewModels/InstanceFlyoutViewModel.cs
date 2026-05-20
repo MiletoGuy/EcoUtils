@@ -22,6 +22,7 @@ public class InstanceFlyoutViewModel : ViewModelBase
     private readonly IDialogService               _dialogService;
     private readonly ILogService                  _log;
     private readonly IUserSettingsService         _userSettingsService;
+    private readonly IPostgresConfigService       _postgresConfigService;
     private readonly Func<EcoInstance, Task>      _onConfirmado;
     private readonly Action                       _fecharFlyout;
     private readonly EcoInstance?                 _instanciaExistente;
@@ -188,6 +189,46 @@ public class InstanceFlyoutViewModel : ViewModelBase
         private set => SetProperty(ref _statusBancoVersao, value);
     }
 
+    private string? _statusCarregamentoBancos;
+    public string? StatusCarregamentoBancos
+    {
+        get => _statusCarregamentoBancos;
+        private set
+        {
+            SetProperty(ref _statusCarregamentoBancos, value);
+            OnPropertyChanged(nameof(TemStatusCarregamentoBancos));
+        }
+    }
+
+    public bool TemStatusCarregamentoBancos => !string.IsNullOrWhiteSpace(StatusCarregamentoBancos);
+
+    private bool _falhaCarregamentoBancos;
+    public bool FalhaCarregamentoBancos
+    {
+        get => _falhaCarregamentoBancos;
+        private set => SetProperty(ref _falhaCarregamentoBancos, value);
+    }
+
+    private string? _statusCarregamentoExecutaveis;
+    public string? StatusCarregamentoExecutaveis
+    {
+        get => _statusCarregamentoExecutaveis;
+        private set
+        {
+            SetProperty(ref _statusCarregamentoExecutaveis, value);
+            OnPropertyChanged(nameof(TemStatusCarregamentoExecutaveis));
+        }
+    }
+
+    public bool TemStatusCarregamentoExecutaveis => !string.IsNullOrWhiteSpace(StatusCarregamentoExecutaveis);
+
+    private bool _falhaCarregamentoExecutaveis;
+    public bool FalhaCarregamentoExecutaveis
+    {
+        get => _falhaCarregamentoExecutaveis;
+        private set => SetProperty(ref _falhaCarregamentoExecutaveis, value);
+    }
+
     private string _statusVersao = string.Empty;
     public string StatusVersao
     {
@@ -311,6 +352,14 @@ public class InstanceFlyoutViewModel : ViewModelBase
     }
 
     public bool TemErroImportacaoExe => ErroImportacaoExe is not null;
+
+    private static string MontarMensagemInline(string resumo, string proximoPasso, string? detalhe = null)
+    {
+        if (string.IsNullOrWhiteSpace(detalhe))
+            return $"{resumo} {proximoPasso}";
+
+        return $"{resumo} {proximoPasso} Detalhe: {detalhe}";
+    }
 
     // ── Configurações .ini [PREFERENCIAS] ───────────────────────
     private bool _iniExpanded;
@@ -506,6 +555,7 @@ public class InstanceFlyoutViewModel : ViewModelBase
         IDialogService dialogService,
         ILogService log,
         IUserSettingsService userSettingsService,
+        IPostgresConfigService postgresConfigService,
         Func<EcoInstance, Task> onConfirmado,
         Action fecharFlyout,
         IReadOnlyCollection<string> apelidosExistentes,
@@ -522,6 +572,7 @@ public class InstanceFlyoutViewModel : ViewModelBase
         _dialogService            = dialogService;
         _log                      = log;
         _userSettingsService      = userSettingsService;
+        _postgresConfigService    = postgresConfigService;
         _onConfirmado             = onConfirmado;
         _fecharFlyout             = fecharFlyout;
         _apelidosExistentes       = apelidosExistentes;
@@ -538,6 +589,7 @@ public class InstanceFlyoutViewModel : ViewModelBase
         CancelarRestauracaoFlyoutCommand = new AsyncRelayCommand(async _ =>
         {
             if (BancoSelecionado is null) return;
+            // Regra UX: confirmação destrutiva permanece modal.
             bool confirmar = _dialogService.Confirmar(
                 "Cancelar restauração",
                 "Cancelar a restauração irá interromper o processo e excluir o arquivo parcialmente criado. Deseja continuar?",
@@ -554,6 +606,13 @@ public class InstanceFlyoutViewModel : ViewModelBase
                     Bancos.Remove(bancoParaCancelar);
                     BancoSelecionado = null;
                 }
+            }
+            catch (Exception ex)
+            {
+                ErroConfirmacao = MontarMensagemInline(
+                    "Não foi possível cancelar a restauração agora.",
+                    "Tente novamente em alguns segundos.",
+                    ex.Message);
             }
             finally { IsCancellingRestauracao = false; }
         });
@@ -572,11 +631,18 @@ public class InstanceFlyoutViewModel : ViewModelBase
     {
         try
         {
-            var exes   = await _versionCatalogService.ListarExecutaveisAsync();
-            var bancos = await _databaseDiscoveryService.ListarBancosAsync();
+            var exesResult   = await _versionCatalogService.ListarExecutaveisAsync();
+            var bancosResult = await _databaseDiscoveryService.ListarBancosAsync();
 
-            foreach (var exe   in exes)   Executaveis.Add(exe);
-            foreach (var banco in bancos) Bancos.Add(banco);
+            StatusCarregamentoExecutaveis = exesResult.Message;
+            FalhaCarregamentoExecutaveis  = exesResult.HasError;
+            StatusCarregamentoBancos      = bancosResult.Message;
+            FalhaCarregamentoBancos       = bancosResult.HasError;
+
+            foreach (var exe in exesResult.Items)
+                Executaveis.Add(exe);
+            foreach (var banco in bancosResult.Items)
+                Bancos.Add(banco);
 
             AtualizarMajorsSelecionaveis();
 
@@ -604,6 +670,8 @@ public class InstanceFlyoutViewModel : ViewModelBase
                             EcoPath      = job.DestinoEco
                         };
                         Bancos.Add(bancoRestaurando);
+                        StatusCarregamentoBancos = null;
+                        FalhaCarregamentoBancos  = false;
                         // Preservar o apelido salvo na instância, não sobrescrever com o nome do banco
                         _apelidoAutoPreenchido = false;
                         BancoSelecionado       = bancoRestaurando;
@@ -630,7 +698,10 @@ public class InstanceFlyoutViewModel : ViewModelBase
         }
         catch (Exception ex)
         {
-            ErroConfirmacao = $"Erro ao carregar dados do formulário: {ex.Message}";
+            ErroConfirmacao = MontarMensagemInline(
+                "Não foi possível carregar os dados do formulário.",
+                "Feche e abra o formulário novamente.",
+                ex.Message);
         }
     }
 
@@ -659,6 +730,11 @@ public class InstanceFlyoutViewModel : ViewModelBase
             return;
         }
 
+        // Auto-detecta versão Firebird pelo cabeçalho ODS do arquivo (sem conexão)
+        var ods = await _databaseVersionService.LerOdsDoCabecalhoAsync(BancoSelecionado.EcoPath);
+        if (ods.HasValue)
+            VersaoFirebird = ods.Value.RequerFerramentas25 ? "2.5" : "5.0";
+
         var versaoBancoRaw = await _databaseVersionService.ConsultarVersaoAsync(
             BancoSelecionado.EcoPath,
             ObterPortaFirebirdAtual());
@@ -674,6 +750,9 @@ public class InstanceFlyoutViewModel : ViewModelBase
             StatusBancoVersao = versaoFormatada is not null
                 ? $"Versão {versaoFormatada}"
                 : $"Versão: {versaoBancoRaw}";
+
+            // Fora do fluxo de restore, tenta alinhar automaticamente major/versão/build.
+            TentarAutoSelecionarExeCompativel();
         }
 
         AtualizarCompatibilidade();
@@ -721,6 +800,28 @@ public class InstanceFlyoutViewModel : ViewModelBase
         StatusVersao = VersaoCompativel == true
             ? $"Versão {versaoDisplay} — banco e executável compatíveis."
             : $"Incompatibilidade: banco v{versaoDisplay} × executável v{exeDisplay}.";
+    }
+
+    private void TentarAutoSelecionarExeCompativel()
+    {
+        if (ExecutavelSelecionado is not null || _versaoBancoRaw is null) return;
+
+        var majorBanco  = EcoVersionHelper.ExtrairMajor(_versaoBancoRaw);
+        var versaoBanco = EcoVersionHelper.ExtrairVersao(_versaoBancoRaw);
+        if (majorBanco is null || versaoBanco is null) return;
+
+        var melhorExe = Executaveis
+            .Where(e => string.Equals(EcoVersionHelper.ExtrairMajorExe(e.NomeCompleto), majorBanco, StringComparison.OrdinalIgnoreCase)
+                     && string.Equals(EcoVersionHelper.ExtrairVersaoExeSemMajor(e.NomeCompleto), versaoBanco, StringComparison.OrdinalIgnoreCase))
+            .OrderByDescending(e => int.TryParse(e.NumeroBuild, out var b) ? b : int.MinValue)
+            .ThenByDescending(e => e.NumeroBuild, StringComparer.OrdinalIgnoreCase)
+            .FirstOrDefault();
+
+        if (melhorExe is null) return;
+
+        MajorSelecionado      = EcoVersionHelper.FormatarMajor(majorBanco);
+        VersaoSelecionada     = versaoBanco;
+        ExecutavelSelecionado = melhorExe;
     }
 
     // "14650000" → "650"  (ignora os 2 primeiros dígitos do major e os 3 últimos do patch)
@@ -802,6 +903,7 @@ public class InstanceFlyoutViewModel : ViewModelBase
 
                 if (System.IO.File.Exists(destinoRestore))
                 {
+                    // Regra UX: confirmação destrutiva permanece modal.
                     bool substituir = _dialogService.Confirmar(
                         "Banco já existe",
                         $"Já existe um banco com o nome \"{apelidoBkp}\" na pasta de dados. Deseja substituí-lo?",
@@ -815,7 +917,10 @@ public class InstanceFlyoutViewModel : ViewModelBase
                     }
                     catch (Exception ex)
                     {
-                        ErroImportacao = $"Não foi possível remover o banco existente: {ex.Message}";
+                        ErroImportacao = MontarMensagemInline(
+                            "Não foi possível substituir o banco existente.",
+                            "Escolha outro apelido ou feche o processo que está usando o arquivo.",
+                            ex.Message);
                         return;
                     }
                 }
@@ -831,6 +936,8 @@ public class InstanceFlyoutViewModel : ViewModelBase
                 };
 
                 Bancos.Add(novoBancoRestore);
+                StatusCarregamentoBancos = null;
+                FalhaCarregamentoBancos  = false;
                 BancoSelecionado = novoBancoRestore;
                 return;
             }
@@ -867,11 +974,16 @@ public class InstanceFlyoutViewModel : ViewModelBase
             };
 
             Bancos.Add(novoBanco);
+            StatusCarregamentoBancos = null;
+            FalhaCarregamentoBancos  = false;
             BancoSelecionado = novoBanco;
         }
         catch (Exception ex)
         {
-            ErroImportacao = ex.Message;
+            ErroImportacao = MontarMensagemInline(
+                "Falha ao importar banco.",
+                "Verifique o arquivo e tente novamente.",
+                ex.Message);
         }
         finally
         {
@@ -968,6 +1080,7 @@ public class InstanceFlyoutViewModel : ViewModelBase
             bool substituir = false;
             if (System.IO.File.Exists(destinoExe))
             {
+                // Regra UX: confirmação destrutiva permanece modal.
                 bool confirmar = _dialogService.Confirmar(
                     "Executável já existe",
                     $"Já existe um executável \"{nomeExe}\" na pasta Utils. Deseja substituí-lo?",
@@ -1007,13 +1120,18 @@ public class InstanceFlyoutViewModel : ViewModelBase
                 Executaveis.Add(novoExe);
             }
 
+            StatusCarregamentoExecutaveis = null;
+            FalhaCarregamentoExecutaveis  = false;
             MajorSelecionado      = EcoVersionHelper.FormatarMajor(majorCompacto);
             VersaoSelecionada     = EcoVersionHelper.ExtrairVersaoExeSemMajor(novoExe.NomeCompleto);
             ExecutavelSelecionado = novoExe;
         }
         catch (Exception ex)
         {
-            ErroImportacaoExe = ex.Message;
+            ErroImportacaoExe = MontarMensagemInline(
+                "Falha ao importar executável.",
+                "Revise versão/build e tente novamente.",
+                ex.Message);
         }
         finally
         {
@@ -1143,14 +1261,18 @@ public class InstanceFlyoutViewModel : ViewModelBase
                 var versaoExe = ExtrairVersaoExe(ExecutavelSelecionado.NomeCompleto);
                 if (versaoExe is null)
                 {
-                    ErroConfirmacao = "Não foi possível extrair a versão do executável para alterar o banco.";
+                    ErroConfirmacao = MontarMensagemInline(
+                        "Não foi possível extrair a versão do executável para alterar o banco.",
+                        "Selecione outro executável ou desmarque a opção de usar a versão do executável.");
                     return;
                 }
 
                 var novaVersaoDB = ConstruirVersaoDBComExe(_versaoBancoRaw, versaoExe);
                 if (novaVersaoDB is null)
                 {
-                    ErroConfirmacao = "Formato da versão do banco não suportado para alteração.";
+                    ErroConfirmacao = MontarMensagemInline(
+                        "Formato da versão do banco não suportado para alteração.",
+                        "Desmarque a opção de usar a versão do executável ou selecione outro banco.");
                     return;
                 }
 
@@ -1171,6 +1293,9 @@ public class InstanceFlyoutViewModel : ViewModelBase
                 // Mantém o original registrado para que o botão de restauração ainda funcione
                 versaoBancoOriginal = _instanciaExistente.VersaoBancoOriginal;
             }
+
+            if (emCriacao && !BaseEmRestauracao)
+                await TentarSobrescreverConectPostAsync(BancoSelecionado!.EcoPath, porta, nameof(ConfirmarAsync));
 
             instancia ??= new EcoInstance
             {
@@ -1209,16 +1334,15 @@ public class InstanceFlyoutViewModel : ViewModelBase
             {
                 instancia.CriacaoEmAndamento = false;
                 instancia.StatusRestauracao = RestoreJobStatus.Falhou;
-                instancia.ErroRestauracao = $"Falha ao concluir criação: {ex.Message}";
+                instancia.ErroRestauracao = $"Falha ao concluir criação: {ex.Message}. Edite a instância para revisar os dados e tentar novamente.";
                 await _onConfirmado(instancia);
-
-                _dialogService.Notificar(
-                    "Falha ao concluir criação",
-                    $"A instância foi adicionada à lista, mas a implantação não foi concluída.\n\n{ex.Message}");
             }
             else
             {
-                ErroConfirmacao = ex.Message;
+                ErroConfirmacao = MontarMensagemInline(
+                    "Não foi possível salvar a instância.",
+                    "Revise os campos e tente novamente.",
+                    ex.Message);
             }
         }
     }
@@ -1227,6 +1351,7 @@ public class InstanceFlyoutViewModel : ViewModelBase
     {
         if (_instanciaExistente is null || string.IsNullOrEmpty(_instanciaExistente.VersaoBancoOriginal)) return;
 
+        // Regra UX: confirmação destrutiva permanece modal.
         bool confirmar = _dialogService.Confirmar(
             "Restaurar versão original",
             $"Isso irá reverter a versão do banco para \"{_instanciaExistente.VersaoBancoOriginal}\". Deseja continuar?",
@@ -1281,7 +1406,10 @@ public class InstanceFlyoutViewModel : ViewModelBase
         }
         catch (Exception ex)
         {
-            ErroConfirmacao = $"Erro ao restaurar versão original: {ex.Message}";
+            ErroConfirmacao = MontarMensagemInline(
+                "Não foi possível restaurar a versão original do banco.",
+                "Verifique a conexão com o Firebird e tente novamente.",
+                ex.Message);
         }
     }
 
@@ -1292,4 +1420,31 @@ public class InstanceFlyoutViewModel : ViewModelBase
 
     private static string? ExtrairVersaoExe(string nomeCompleto)
         => EcoVersionHelper.ExtrairSegmentoVersaoExe(nomeCompleto);
+
+    private async Task TentarSobrescreverConectPostAsync(string ecoPath, string portaFirebird, string origem)
+    {
+        var s = _userSettingsService.Settings;
+        if (!s.SobrescreverConfiguracaoPostgres)
+            return;
+
+        if (string.IsNullOrWhiteSpace(ecoPath) || !File.Exists(ecoPath))
+            return;
+
+        try
+        {
+            await _postgresConfigService.SobrescreverConectPostAsync(
+                ecoPath,
+                portaFirebird,
+                s.PostgresIpServidor,
+                s.PostgresPortaServidor,
+                s.PostgresUsuarioServidor,
+                s.PostgresSenhaServidor,
+                s.PostgresNomeBanco);
+        }
+        catch (Exception ex)
+        {
+            _log.Warn(origem,
+                $"Falha ao sobrescrever TGERCONFIGURACAO para base '{ecoPath}': {ex.Message}");
+        }
+    }
 }

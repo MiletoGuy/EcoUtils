@@ -207,6 +207,89 @@
                                 </Grid>
                             </StackPanel>
 
+                            <!-- ── Postgres ── -->
+                            <TextBlock Text="Postgres"
+                                       Foreground="{StaticResource TextPrimary}"
+                                       FontWeight="Bold"
+                                       FontSize="13"
+                                       Margin="0,24,0,12"/>
+
+                            <CheckBox Content="Sobrescrever configurações do banco postgres"
+                                      IsChecked="{Binding SobrescreverConfiguracaoPostgres, Mode=TwoWay}"
+                                      ToolTip="Irá sobrescrever o campo TGERCONFIGURACAO.CONFIGURACAO com os valores informados abaixo"
+                                      Foreground="{StaticResource TextPrimary}"
+                                      Margin="0,0,0,10"/>
+
+                            <Grid IsEnabled="{Binding SobrescreverConfiguracaoPostgres}"
+                                  Margin="0,0,0,4">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="170"/>
+                                    <ColumnDefinition Width="*"/>
+                                </Grid.ColumnDefinitions>
+                                <Grid.RowDefinitions>
+                                    <RowDefinition Height="Auto"/>
+                                    <RowDefinition Height="Auto"/>
+                                    <RowDefinition Height="Auto"/>
+                                    <RowDefinition Height="Auto"/>
+                                    <RowDefinition Height="Auto"/>
+                                </Grid.RowDefinitions>
+
+                                <TextBlock Grid.Row="0"
+                                           Grid.Column="0"
+                                           Text="IP SERVIDOR"
+                                           Foreground="{StaticResource TextSecondary}"
+                                           Margin="0,6,12,6"
+                                           VerticalAlignment="Center"/>
+                                <TextBox Grid.Row="0"
+                                         Grid.Column="1"
+                                         Text="{Binding PostgresIpServidor, UpdateSourceTrigger=PropertyChanged}"
+                                         Margin="0,2,0,2"/>
+
+                                <TextBlock Grid.Row="1"
+                                           Grid.Column="0"
+                                           Text="PORTA SERVIDOR"
+                                           Foreground="{StaticResource TextSecondary}"
+                                           Margin="0,6,12,6"
+                                           VerticalAlignment="Center"/>
+                                <TextBox Grid.Row="1"
+                                         Grid.Column="1"
+                                         Text="{Binding PostgresPortaServidor, UpdateSourceTrigger=PropertyChanged}"
+                                         Margin="0,2,0,2"/>
+
+                                <TextBlock Grid.Row="2"
+                                           Grid.Column="0"
+                                           Text="USUARIO SERVIDOR"
+                                           Foreground="{StaticResource TextSecondary}"
+                                           Margin="0,6,12,6"
+                                           VerticalAlignment="Center"/>
+                                <TextBox Grid.Row="2"
+                                         Grid.Column="1"
+                                         Text="{Binding PostgresUsuarioServidor, UpdateSourceTrigger=PropertyChanged}"
+                                         Margin="0,2,0,2"/>
+
+                                <TextBlock Grid.Row="3"
+                                           Grid.Column="0"
+                                           Text="SENHA SERVIDOR"
+                                           Foreground="{StaticResource TextSecondary}"
+                                           Margin="0,6,12,6"
+                                           VerticalAlignment="Center"/>
+                                <TextBox Grid.Row="3"
+                                         Grid.Column="1"
+                                         Text="{Binding PostgresSenhaServidor, UpdateSourceTrigger=PropertyChanged}"
+                                         Margin="0,2,0,2"/>
+
+                                <TextBlock Grid.Row="4"
+                                           Grid.Column="0"
+                                           Text="NOME BANCO"
+                                           Foreground="{StaticResource TextSecondary}"
+                                           Margin="0,6,12,6"
+                                           VerticalAlignment="Center"/>
+                                <TextBox Grid.Row="4"
+                                         Grid.Column="1"
+                                         Text="{Binding PostgresNomeBanco, UpdateSourceTrigger=PropertyChanged}"
+                                         Margin="0,2,0,2"/>
+                            </Grid>
+
                             <!-- ── Versão do Utils ── -->
                             <TextBlock Text="Versão do Utils"
                                        Foreground="{StaticResource TextSecondary}"
@@ -266,6 +349,24 @@
                                        TextWrapping="Wrap"
                                        Margin="0,2,0,0"
                                        Visibility="{Binding TemErroVersoes, Converter={StaticResource BoolToVisibility}}"/>
+
+                            <!-- Mensagem inline da aba Geral (salvar/propagar) -->
+                            <TextBlock Text="{Binding MensagemInlineGeral}"
+                                       FontSize="11"
+                                       TextWrapping="Wrap"
+                                       Margin="0,8,0,0"
+                                       Visibility="{Binding TemMensagemInlineGeral, Converter={StaticResource BoolToVisibility}}">
+                                <TextBlock.Style>
+                                    <Style TargetType="TextBlock">
+                                        <Setter Property="Foreground" Value="{StaticResource StatusWarning}"/>
+                                        <Style.Triggers>
+                                            <DataTrigger Binding="{Binding MensagemInlineGeralErro}" Value="True">
+                                                <Setter Property="Foreground" Value="{StaticResource StatusError}"/>
+                                            </DataTrigger>
+                                        </Style.Triggers>
+                                    </Style>
+                                </TextBlock.Style>
+                            </TextBlock>
                         </StackPanel>
                     </ScrollViewer>
 

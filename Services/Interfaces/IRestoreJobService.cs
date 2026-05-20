@@ -41,6 +41,11 @@ public interface IRestoreJobService
     void CancelarTodosAtivos();
 
     /// <summary>
+    /// Cancela todos os jobs ativos e aguarda sua finalização completa.
+    /// </summary>
+    Task CancelarTodosAtivosAsync();
+
+    /// <summary>
     /// Disparado no thread da UI quando um job muda para Concluido ou Falhou.
     /// </summary>
     event EventHandler<RestoreJobEntry> JobFinalizado;

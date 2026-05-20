@@ -199,6 +199,24 @@
                     <LineBreak/>
                     <Run Text="Deseja atualizar agora?"/>
                 </TextBlock>
+
+                <TextBlock Text="{Binding MensagemUpdateFluxo}"
+                           Margin="0,0,0,12"
+                           FontSize="11"
+                           TextWrapping="Wrap"
+                           Visibility="{Binding TemMensagemUpdateFluxo, Converter={StaticResource BoolToVisibility}}">
+                    <TextBlock.Style>
+                        <Style TargetType="TextBlock">
+                            <Setter Property="Foreground" Value="{StaticResource StatusWarning}"/>
+                            <Style.Triggers>
+                                <DataTrigger Binding="{Binding MensagemUpdateErro}" Value="True">
+                                    <Setter Property="Foreground" Value="{StaticResource StatusError}"/>
+                                </DataTrigger>
+                            </Style.Triggers>
+                        </Style>
+                    </TextBlock.Style>
+                </TextBlock>
+
                 <!-- Ações -->
                 <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
                     <Button Content="Depois"

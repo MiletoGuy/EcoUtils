@@ -39,6 +39,7 @@
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto"/>
             <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
             <RowDefinition Height="*"/>
         </Grid.RowDefinitions>
 
@@ -117,8 +118,31 @@
             </DockPanel>
         </Border>
 
+        <!-- Mensagem inline de operação -->
+        <Border Grid.Row="2"
+                Background="{StaticResource InputBackground}"
+                BorderBrush="{StaticResource InputBorder}"
+                BorderThickness="0,0,0,1"
+                Padding="16,8"
+                Visibility="{Binding TemMensagemInline, Converter={StaticResource BoolToVisibility}}">
+            <TextBlock Text="{Binding MensagemInline}"
+                       FontSize="11"
+                       TextWrapping="Wrap">
+                <TextBlock.Style>
+                    <Style TargetType="TextBlock">
+                        <Setter Property="Foreground" Value="{StaticResource StatusWarning}"/>
+                        <Style.Triggers>
+                            <DataTrigger Binding="{Binding MensagemInlineErro}" Value="True">
+                                <Setter Property="Foreground" Value="{StaticResource StatusError}"/>
+                            </DataTrigger>
+                        </Style.Triggers>
+                    </Style>
+                </TextBlock.Style>
+            </TextBlock>
+        </Border>
+
         <!-- Estado vazio -->
-        <StackPanel Grid.Row="2"
+        <StackPanel Grid.Row="3"
                     HorizontalAlignment="Center"
                     VerticalAlignment="Center"
                     Visibility="{Binding ListaVazia, Converter={StaticResource BoolToVisibility}}">
@@ -133,7 +157,7 @@
         </StackPanel>
 
         <!-- Tabela de instâncias -->
-        <Grid Grid.Row="2"
+          <Grid Grid.Row="3"
               Visibility="{Binding ListaVazia, Converter={StaticResource InverseBoolToVisibility}}">
             <Grid.RowDefinitions>
                 <RowDefinition Height="Auto"/>
@@ -597,7 +621,7 @@
         </Grid>
 
         <!-- Flyout overlay (cobre toda a área) -->
-        <Grid Grid.Row="0" Grid.RowSpan="3"
+                <Grid Grid.Row="0" Grid.RowSpan="4"
               Visibility="{Binding FlyoutAberto, Converter={StaticResource BoolToVisibility}}">
             <Rectangle Fill="{StaticResource OverlayBackground}"/>
             <Border HorizontalAlignment="Center"

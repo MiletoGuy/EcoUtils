@@ -19,6 +19,7 @@ public partial class MainWindow : Window
     private const int DWMWA_TEXT_COLOR    = 36;
 
     private readonly IRestoreJobService _restoreJobService;
+    private bool _fechandoAposCancelarRestauracoes;
 
     public MainWindow(MainViewModel vm, IRestoreJobService restoreJobService)
     {
@@ -34,9 +35,9 @@ public partial class MainWindow : Window
         Closing += OnClosing;
     }
 
-    private void OnClosing(object? sender, CancelEventArgs e)
+    private async void OnClosing(object? sender, CancelEventArgs e)
     {
-        if (!_restoreJobService.HaJobsAtivos()) return;
+        if (_fechandoAposCancelarRestauracoes || !_restoreJobService.HaJobsAtivos()) return;
 
         var result = MessageBox.Show(
             "Há uma restauração de base em andamento.\n\n" +
@@ -53,8 +54,37 @@ public partial class MainWindow : Window
             return;
         }
 
-        // Cancela todos os gbak antes de fechar para não deixar processos órfãos
-        _restoreJobService.CancelarTodosAtivos();
+        e.Cancel = true;
+        IsEnabled = false;
+        _fechandoAposCancelarRestauracoes = true;
+
+        try
+        {
+            await _restoreJobService.CancelarTodosAtivosAsync().WaitAsync(TimeSpan.FromSeconds(5));
+
+            Closing -= OnClosing;
+            Close();
+        }
+        catch (TimeoutException)
+        {
+            _fechandoAposCancelarRestauracoes = false;
+            IsEnabled = true;
+            MessageBox.Show(
+                "A restauração ainda está sendo encerrada. Aguarde alguns segundos e tente fechar novamente.",
+                "Encerramento em andamento",
+                MessageBoxButton.OK,
+                MessageBoxImage.Information);
+        }
+        catch (Exception ex)
+        {
+            _fechandoAposCancelarRestauracoes = false;
+            IsEnabled = true;
+            MessageBox.Show(
+                $"Não foi possível concluir o cancelamento da restauração antes de fechar o app.\n\n{ex.Message}",
+                "Erro ao encerrar restauração",
+                MessageBoxButton.OK,
+                MessageBoxImage.Error);
+        }
     }
 
     private void OnLoaded(object sender, RoutedEventArgs e)

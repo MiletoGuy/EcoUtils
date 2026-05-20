@@ -8,7 +8,7 @@
     <UseWPF>true</UseWPF>
     <ApplicationManifest>app.manifest</ApplicationManifest>
     <ApplicationIcon>Assets\Utils_icon.ico</ApplicationIcon>
-    <Version>0.2.9</Version>
+    <Version>0.2.10</Version>
     <PublishReadyToRun>true</PublishReadyToRun>
   </PropertyGroup>
 
@@ -16,6 +16,10 @@
     <PackageReference Include="FirebirdSql.Data.FirebirdClient" Version="10.3.4" />
     <PackageReference Include="Microsoft.Extensions.DependencyInjection" Version="10.0.0" />
     <PackageReference Include="SharpCompress" Version="0.38.0" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <NuGetAuditSuppress Include="https://github.com/advisories/GHSA-6c8g-7p36-r338" />
   </ItemGroup>
 
   <ItemGroup>

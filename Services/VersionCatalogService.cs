@@ -15,14 +15,18 @@ public class VersionCatalogService : IVersionCatalogService
 
     public VersionCatalogService(ILogService log) => _log = log;
 
-    public async Task<IReadOnlyList<EcoExecutavel>> ListarExecutaveisAsync()
+    public async Task<CollectionLoadResult<EcoExecutavel>> ListarExecutaveisAsync()
     {
-        return await Task.Run<IReadOnlyList<EcoExecutavel>>(() =>
+        return await Task.Run(() =>
         {
             try
             {
                 if (!Directory.Exists(EcoPathConstants.UtilsDir))
-                    return Array.Empty<EcoExecutavel>();
+                {
+                    return new CollectionLoadResult<EcoExecutavel>(
+                        Array.Empty<EcoExecutavel>(),
+                        $"A pasta Utils não foi encontrada em {EcoPathConstants.UtilsDir}. Importe um executável para continuar.");
+                }
 
                 var resultado = Directory
                     .EnumerateFiles(EcoPathConstants.UtilsDir, "*.exe")
@@ -34,12 +38,22 @@ public class VersionCatalogService : IVersionCatalogService
                     })
                     .ToList();
 
-                return resultado;
+                if (resultado.Count == 0)
+                {
+                    return new CollectionLoadResult<EcoExecutavel>(
+                        resultado,
+                        "Nenhum executável ECO foi encontrado. Use o botão + para importar um executável.");
+                }
+
+                return new CollectionLoadResult<EcoExecutavel>(resultado);
             }
             catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
             {
                 _log.Error(nameof(VersionCatalogService) + "." + nameof(ListarExecutaveisAsync), ex);
-                return Array.Empty<EcoExecutavel>();
+                return new CollectionLoadResult<EcoExecutavel>(
+                    Array.Empty<EcoExecutavel>(),
+                    "Não foi possível listar os executáveis agora. Verifique permissões da pasta Utils e tente novamente.",
+                    HasError: true);
             }
         });
     }

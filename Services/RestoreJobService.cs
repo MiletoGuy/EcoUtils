@@ -89,6 +89,25 @@ public class RestoreJobService : IRestoreJobService
         }
     }
 
+    public Task CancelarTodosAtivosAsync()
+    {
+        List<RestoreJobEntry> ativos;
+        lock (_lock)
+            ativos = _jobs.Values
+                .Where(e => e.Status == RestoreJobStatus.Restaurando)
+                .ToList();
+
+        if (ativos.Count == 0)
+            return Task.CompletedTask;
+
+        foreach (var entry in ativos)
+        {
+            try { entry.Cts.Cancel(); } catch { }
+        }
+
+        return Task.WhenAll(ativos.Select(entry => entry.Finalizacao.Task));
+    }
+
     public Task CancelarAsync(string destinoEco)
     {
         RestoreJobEntry? entry;
@@ -98,21 +117,9 @@ public class RestoreJobService : IRestoreJobService
         if (entry is null || entry.Status != RestoreJobStatus.Restaurando)
             return Task.CompletedTask;
 
-        var tcs = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
-
-        void OnJobFinalizado(object? s, RestoreJobEntry e)
-        {
-            if (!e.DestinoEco.Equals(destinoEco, StringComparison.OrdinalIgnoreCase)) return;
-            JobFinalizado -= OnJobFinalizado;
-            tcs.TrySetResult();
-        }
-
-        JobFinalizado += OnJobFinalizado;
-
-        // Cancela após registrar o handler para não perder o evento em raças
         entry.Cts.Cancel();
 
-        return tcs.Task;
+        return entry.Finalizacao.Task;
     }
 
     private async Task ExecutarJobAsync(RestoreJobEntry entry)
@@ -130,19 +137,19 @@ public class RestoreJobService : IRestoreJobService
                 progress,
                 entry.Cts.Token);
 
-            AtualizarEstadoFinal(entry, RestoreJobStatus.Concluido, erro: null);
+            await AtualizarEstadoFinalAsync(entry, RestoreJobStatus.Concluido, erro: null);
         }
         catch (OperationCanceledException)
         {
-            AtualizarEstadoFinal(entry, RestoreJobStatus.Falhou, "Restauração cancelada pelo usuário.");
+            await AtualizarEstadoFinalAsync(entry, RestoreJobStatus.Falhou, "Restauração cancelada pelo usuário.");
         }
         catch (Exception ex)
         {
-            AtualizarEstadoFinal(entry, RestoreJobStatus.Falhou, ex.Message);
+            await AtualizarEstadoFinalAsync(entry, RestoreJobStatus.Falhou, ex.Message);
         }
     }
 
-    private void AtualizarEstadoFinal(RestoreJobEntry entry, RestoreJobStatus status, string? erro)
+    private async Task AtualizarEstadoFinalAsync(RestoreJobEntry entry, RestoreJobStatus status, string? erro)
     {
         var dispatcher = Application.Current?.Dispatcher;
         if (dispatcher is null || dispatcher.HasShutdownStarted || dispatcher.HasShutdownFinished)
@@ -150,14 +157,41 @@ public class RestoreJobService : IRestoreJobService
             // App encerrando — atualiza o estado diretamente sem dispatch (sem UI para notificar)
             entry.Erro   = erro;
             entry.Status = status;
+            entry.Finalizacao.TrySetResult();
             return;
         }
 
-        dispatcher.Invoke(() =>
+        try
+        {
+            if (dispatcher.CheckAccess())
+            {
+                entry.Erro   = erro;
+                entry.Status = status;
+                JobFinalizado?.Invoke(this, entry);
+            }
+            else
+            {
+                await dispatcher.InvokeAsync(() =>
+                {
+                    entry.Erro   = erro;
+                    entry.Status = status;
+                    JobFinalizado?.Invoke(this, entry);
+                });
+            }
+        }
+        catch (TaskCanceledException)
         {
             entry.Erro   = erro;
             entry.Status = status;
-            JobFinalizado?.Invoke(this, entry);
-        });
+        }
+        catch (InvalidOperationException)
+        {
+            entry.Erro   = erro;
+            entry.Status = status;
+        }
+        finally
+        {
+            entry.Finalizacao.TrySetResult();
+        }
     }
 }

@@ -30,6 +30,7 @@ public class ExecutarEcoViewModel : ViewModelBase
     private readonly IDialogService            _dialogService;
     private readonly ILogService               _log;
     private readonly IUserSettingsService      _userSettingsService;
+    private readonly IPostgresConfigService    _postgresConfigService;
 
     public ObservableCollection<EcoInstance> Instancias { get; }
 
@@ -162,6 +163,26 @@ public class ExecutarEcoViewModel : ViewModelBase
         set => SetProperty(ref _flyoutVm, value);
     }
 
+    private string? _mensagemInline;
+    public string? MensagemInline
+    {
+        get => _mensagemInline;
+        private set
+        {
+            SetProperty(ref _mensagemInline, value);
+            OnPropertyChanged(nameof(TemMensagemInline));
+        }
+    }
+
+    public bool TemMensagemInline => !string.IsNullOrWhiteSpace(MensagemInline);
+
+    private bool _mensagemInlineErro;
+    public bool MensagemInlineErro
+    {
+        get => _mensagemInlineErro;
+        private set => SetProperty(ref _mensagemInlineErro, value);
+    }
+
     public ICommand AdicionarCommand          { get; }
     public ICommand EditarCommand             { get; }
     public ICommand ExcluirCommand            { get; }
@@ -184,7 +205,8 @@ public class ExecutarEcoViewModel : ViewModelBase
         ILaunchService launchService,
         IDialogService dialogService,
         ILogService log,
-        IUserSettingsService userSettingsService)
+        IUserSettingsService userSettingsService,
+        IPostgresConfigService postgresConfigService)
     {
         _instanceRepository       = instanceRepository;
         _versionCatalogService    = versionCatalogService;
@@ -199,6 +221,7 @@ public class ExecutarEcoViewModel : ViewModelBase
         _dialogService            = dialogService;
         _log                      = log;
         _userSettingsService      = userSettingsService;
+        _postgresConfigService    = postgresConfigService;
 
         Instancias = new ObservableCollection<EcoInstance>();
         Instancias.CollectionChanged += (_, _) => OnPropertyChanged(nameof(ListaVazia));
@@ -229,6 +252,7 @@ public class ExecutarEcoViewModel : ViewModelBase
     {
         try
         {
+            MensagemInline = null;
             var lista = await _instanceRepository.CarregarAsync();
             foreach (var inst in lista)
             {
@@ -263,8 +287,8 @@ public class ExecutarEcoViewModel : ViewModelBase
         catch (Exception ex)
         {
             _log.Error(nameof(CarregarInstanciasAsync), ex);
-            _dialogService.Notificar("Erro ao carregar instâncias",
-                "Não foi possível carregar a lista de instâncias. Verifique os logs.");
+            MensagemInlineErro = true;
+            MensagemInline = "Não foi possível carregar a lista de instâncias agora. Tente reabrir o aplicativo e verifique permissões de acesso aos arquivos.";
         }
     }
 
@@ -272,6 +296,7 @@ public class ExecutarEcoViewModel : ViewModelBase
     {
         try
         {
+            MensagemInline = null;
             var apelidosExistentes = Instancias.Select(i => i.Apelido).ToList();
             FlyoutVM = new InstanceFlyoutViewModel(
                 _versionCatalogService,
@@ -285,6 +310,7 @@ public class ExecutarEcoViewModel : ViewModelBase
                 _dialogService,
                 _log,
                 _userSettingsService,
+                _postgresConfigService,
                 async instancia => await UpsertInstanciaAsync(instancia),
                 () => FlyoutAberto = false,
                 apelidosExistentes);
@@ -293,8 +319,8 @@ public class ExecutarEcoViewModel : ViewModelBase
         catch (Exception ex)
         {
             _log.Error(nameof(AbrirFlyoutNovo), ex);
-            _dialogService.Notificar("Erro ao abrir formulário",
-                $"Não foi possível abrir o formulário de nova instância.\n\n{ex.Message}");
+            MensagemInlineErro = true;
+            MensagemInline = $"Não foi possível abrir o formulário de nova instância: {ex.Message}";
         }
     }
 
@@ -302,6 +328,7 @@ public class ExecutarEcoViewModel : ViewModelBase
     {
         try
         {
+            MensagemInline = null;
             var apelidosExistentes = Instancias
                 .Where(i => i.Id != instancia.Id)
                 .Select(i => i.Apelido)
@@ -318,6 +345,7 @@ public class ExecutarEcoViewModel : ViewModelBase
                 _dialogService,
                 _log,
                 _userSettingsService,
+                _postgresConfigService,
                 async instanciaEditada => await UpsertInstanciaAsync(instanciaEditada),
                 () => FlyoutAberto = false,
                 apelidosExistentes,
@@ -327,8 +355,8 @@ public class ExecutarEcoViewModel : ViewModelBase
         catch (Exception ex)
         {
             _log.Error(nameof(AbrirFlyoutEditar), ex);
-            _dialogService.Notificar("Erro ao abrir formulário",
-                $"Não foi possível abrir o formulário de edição.\n\n{ex.Message}");
+            MensagemInlineErro = true;
+            MensagemInline = $"Não foi possível abrir o formulário de edição: {ex.Message}";
         }
     }
 
@@ -364,16 +392,19 @@ public class ExecutarEcoViewModel : ViewModelBase
 
     private async Task ExcluirInstanciaAsync(EcoInstance instancia)
     {
+        MensagemInline = null;
+
         bool confirmar;
         try
         {
+            // Regra UX: confirmação destrutiva permanece modal.
             confirmar = _dialogService.Confirmar("Excluir instância", $"Excluir \"{instancia.Apelido}\"?", "Excluir");
         }
         catch (Exception ex)
         {
             _log.Error(nameof(ExcluirInstanciaAsync), ex);
-            _dialogService.Notificar("Não foi possível excluir",
-                $"Falha ao abrir a confirmação de exclusão.\n\n{ex.Message}");
+            MensagemInlineErro = true;
+            MensagemInline = $"Não foi possível abrir a confirmação de exclusão. Tente novamente. Detalhe: {ex.Message}";
             return;
         }
 
@@ -416,15 +447,23 @@ public class ExecutarEcoViewModel : ViewModelBase
         {
             _log.Error(nameof(ExcluirInstanciaAsync), ex);
             Instancias.Insert(Math.Min(idxOriginal, Instancias.Count), instancia);
-            _dialogService.Notificar("Não foi possível excluir",
-                $"Falha ao salvar a remoção da instância.\n\n{ex.Message}");
+            MensagemInlineErro = true;
+            MensagemInline = $"Não foi possível concluir a exclusão agora. Tente novamente. Detalhe: {ex.Message}";
             return;
         }
 
         _log.Info(nameof(ExcluirInstanciaAsync), $"Instância \"{instancia.Apelido}\" removida com sucesso.");
 
         if (avisoArquivos is not null)
-            _dialogService.Notificar("Instância removida com aviso", avisoArquivos);
+        {
+            MensagemInlineErro = false;
+            MensagemInline = avisoArquivos;
+        }
+        else
+        {
+            MensagemInlineErro = false;
+            MensagemInline = $"Instância \"{instancia.Apelido}\" removida com sucesso.";
+        }
     }
 
     private void EncerrarProcessosDoExe(string exePath)
@@ -484,12 +523,14 @@ public class ExecutarEcoViewModel : ViewModelBase
             return;
         }
 
+        MensagemInline = null;
         _log.Info(nameof(IniciarEcoAsync), $"Iniciando instância \"{instancia.Apelido}\" com exe \"{instancia.ExecutavelNome}\"");
         var (sucesso, erro) = await _launchService.ExecutarAsync(instancia);
         if (!sucesso)
         {
             _log.Warn(nameof(IniciarEcoAsync), $"Falha ao iniciar \"{instancia.Apelido}\": {erro}");
-            _dialogService.Notificar("Erro ao executar", erro ?? "Erro desconhecido.");
+            MensagemInlineErro = true;
+            MensagemInline = erro ?? "Erro desconhecido ao executar a instância.";
         }
         else
         {
@@ -531,6 +572,7 @@ public class ExecutarEcoViewModel : ViewModelBase
             if (job.Status == RestoreJobStatus.Concluido)
             {
                 _log.Info(nameof(OnJobFinalizado), $"Restauração concluída para \"{inst.Apelido}\". Consultando versão do banco...");
+                await TentarSobrescreverConectPostAsync(inst, origem: "OnJobFinalizado");
                 await AtualizarVersaoBancoAsync(inst);
 
                 if (string.IsNullOrEmpty(inst.ExecutavelFontePath))
@@ -558,9 +600,10 @@ public class ExecutarEcoViewModel : ViewModelBase
     {
         _log.Info(nameof(TentarAutoSelecionarExeAsync), $"Tentando auto-selecionar executável para \"{inst.Apelido}\"...");
 
-        var executaveis  = await _versionCatalogService.ListarExecutaveisAsync();
-        var versaoBanco  = ExtrairVersaoBancoRaw(inst.VersaoBanco);
-        var major        = EcoVersionHelper.ExtrairMajor(inst.VersaoBanco);
+        var executaveisResult = await _versionCatalogService.ListarExecutaveisAsync();
+        var executaveis       = executaveisResult.Items;
+        var versaoBanco       = ExtrairVersaoBancoRaw(inst.VersaoBanco);
+        var major             = EcoVersionHelper.ExtrairMajor(inst.VersaoBanco);
 
         EcoExecutavel? melhorExe = null;
         if (versaoBanco is not null)
@@ -574,9 +617,11 @@ public class ExecutarEcoViewModel : ViewModelBase
 
         if (melhorExe is null)
         {
-            var detalhe = versaoBanco is not null
-                ? $"nenhum executável compatível com a versão {versaoBanco} foi encontrado"
-                : "não foi possível determinar a versão do banco";
+            var detalhe = executaveis.Count == 0 && !string.IsNullOrWhiteSpace(executaveisResult.Message)
+                ? executaveisResult.Message.TrimEnd('.')
+                : versaoBanco is not null
+                    ? $"nenhum executável compatível com a versão {versaoBanco} foi encontrado"
+                    : "não foi possível determinar a versão do banco";
             _log.Warn(nameof(TentarAutoSelecionarExeAsync),
                 $"Auto-seleção falhou para \"{inst.Apelido}\": {detalhe}.");
             inst.StatusRestauracao = RestoreJobStatus.Falhou;
@@ -662,6 +707,33 @@ public class ExecutarEcoViewModel : ViewModelBase
         return string.Equals(versaoFirebird, "2.5", StringComparison.Ordinal)
             ? settings.PortaFirebird25
             : settings.PortaFirebird50;
+    }
+
+    private async Task TentarSobrescreverConectPostAsync(EcoInstance instancia, string origem)
+    {
+        var s = _userSettingsService.Settings;
+        if (!s.SobrescreverConfiguracaoPostgres)
+            return;
+
+        if (string.IsNullOrWhiteSpace(instancia.BasePath) || !File.Exists(instancia.BasePath))
+            return;
+
+        try
+        {
+            await _postgresConfigService.SobrescreverConectPostAsync(
+                instancia.BasePath,
+                ObterPortaFirebird(instancia.VersaoFirebird),
+                s.PostgresIpServidor,
+                s.PostgresPortaServidor,
+                s.PostgresUsuarioServidor,
+                s.PostgresSenhaServidor,
+                s.PostgresNomeBanco);
+        }
+        catch (Exception ex)
+        {
+            _log.Warn(origem,
+                $"Falha ao sobrescrever TGERCONFIGURACAO para '{instancia.Apelido}' ({instancia.BasePath}): {ex.Message}");
+        }
     }
 
     private bool FiltrarInstancia(EcoInstance inst)

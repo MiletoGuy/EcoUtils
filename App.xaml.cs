@@ -78,6 +78,7 @@ public partial class App : Application
             sc.AddSingleton<IDialogService,            DialogService>();
             sc.AddSingleton<IUpdateService,            UpdateService>();
             sc.AddSingleton<IUserSettingsService,      UserSettingsService>();
+            sc.AddSingleton<IPostgresConfigService,    PostgresConfigService>();
 
             // ViewModels
             sc.AddSingleton<ExecutarEcoViewModel>();

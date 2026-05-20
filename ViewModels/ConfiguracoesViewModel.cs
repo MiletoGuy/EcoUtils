@@ -83,6 +83,59 @@ public class ConfiguracoesViewModel : ViewModelBase
         get => _dllFirebird50Path;
         set => SetProperty(ref _dllFirebird50Path, value);
     }
+
+    // ── Postgres (TGERCONFIGURACAO.CONFIGURACAO) ─────────────────────────
+    private bool _sobrescreverConfiguracaoPostgres;
+    public bool SobrescreverConfiguracaoPostgres
+    {
+        get => _sobrescreverConfiguracaoPostgres;
+        set
+        {
+            if (!SetProperty(ref _sobrescreverConfiguracaoPostgres, value)) return;
+            if (value) AplicarDefaultsPostgresSeVazio();
+        }
+    }
+
+    private string _postgresIpServidor = string.Empty;
+    public string PostgresIpServidor
+    {
+        get => _postgresIpServidor;
+        set => SetProperty(ref _postgresIpServidor, value);
+    }
+
+    private string _postgresPortaServidor = string.Empty;
+    public string PostgresPortaServidor
+    {
+        get => _postgresPortaServidor;
+        set => SetProperty(ref _postgresPortaServidor, value);
+    }
+
+    private string _postgresUsuarioServidor = string.Empty;
+    public string PostgresUsuarioServidor
+    {
+        get => _postgresUsuarioServidor;
+        set => SetProperty(ref _postgresUsuarioServidor, value);
+    }
+
+    private string _postgresSenhaServidor = string.Empty;
+    public string PostgresSenhaServidor
+    {
+        get => _postgresSenhaServidor;
+        set => SetProperty(ref _postgresSenhaServidor, value);
+    }
+
+    private string _postgresNomeBanco = string.Empty;
+    public string PostgresNomeBanco
+    {
+        get => _postgresNomeBanco;
+        set => SetProperty(ref _postgresNomeBanco, value);
+    }
+
+    private static string DefaultPostgresIp => "LOCALHOST";
+    private static string DefaultPostgresPorta => "5432";
+    private static string DefaultPostgresUsuario => "postgres";
+    private static string DefaultPostgresSenha => "postgres";
+
     // ── Versão do Utils ─────────────────────────────────────────
     public string VersaoAtual => _updateService.VersaoAtual;
 
@@ -138,6 +191,26 @@ public class ConfiguracoesViewModel : ViewModelBase
 
     public bool TemErroVersoes => !string.IsNullOrEmpty(ErroVersoes);
 
+    private string? _mensagemInlineGeral;
+    public string? MensagemInlineGeral
+    {
+        get => _mensagemInlineGeral;
+        private set
+        {
+            SetProperty(ref _mensagemInlineGeral, value);
+            OnPropertyChanged(nameof(TemMensagemInlineGeral));
+        }
+    }
+
+    public bool TemMensagemInlineGeral => !string.IsNullOrWhiteSpace(MensagemInlineGeral);
+
+    private bool _mensagemInlineGeralErro;
+    public bool MensagemInlineGeralErro
+    {
+        get => _mensagemInlineGeralErro;
+        private set => SetProperty(ref _mensagemInlineGeralErro, value);
+    }
+
     public ICommand SalvarCommand               { get; }
     public ICommand CancelarCommand             { get; }
 
@@ -168,6 +241,15 @@ public class ConfiguracoesViewModel : ViewModelBase
         _portaFirebird50      = userSettingsService.Settings.PortaFirebird50;
         _dllFirebird25Path    = userSettingsService.Settings.DllFirebird25Path;
         _dllFirebird50Path    = userSettingsService.Settings.DllFirebird50Path;
+        _sobrescreverConfiguracaoPostgres = userSettingsService.Settings.SobrescreverConfiguracaoPostgres;
+        _postgresIpServidor               = userSettingsService.Settings.PostgresIpServidor;
+        _postgresPortaServidor            = userSettingsService.Settings.PostgresPortaServidor;
+        _postgresUsuarioServidor          = userSettingsService.Settings.PostgresUsuarioServidor;
+        _postgresSenhaServidor            = userSettingsService.Settings.PostgresSenhaServidor;
+        _postgresNomeBanco                = userSettingsService.Settings.PostgresNomeBanco;
+
+        if (_sobrescreverConfiguracaoPostgres)
+            AplicarDefaultsPostgresSeVazio();
 
         NavGeralCommand      = new RelayCommand(_ => AbaAtiva = AbaConfiguracoes.Geral);
         NavPatchnotesCommand = new RelayCommand(_ => AbaAtiva = AbaConfiguracoes.Patchnotes);
@@ -198,6 +280,14 @@ public class ConfiguracoesViewModel : ViewModelBase
         Patches = CarregarPatches();
     }
 
+    private static string MontarMensagemInline(string resumo, string proximoPasso, string? detalhe = null)
+    {
+        if (string.IsNullOrWhiteSpace(detalhe))
+            return $"{resumo} {proximoPasso}";
+
+        return $"{resumo} {proximoPasso} Detalhe: {detalhe}";
+    }
+
     /// <summary>Sincroniza os campos com os valores atuais salvos (ao abrir o painel).</summary>
     public void Resetar()
     {
@@ -210,33 +300,110 @@ public class ConfiguracoesViewModel : ViewModelBase
         DllFirebird50Path = string.IsNullOrEmpty(s.DllFirebird50Path) && File.Exists(EcoPathConstants.Firebird50DllPadrao)
             ? EcoPathConstants.Firebird50DllPadrao
             : s.DllFirebird50Path;
+        SobrescreverConfiguracaoPostgres = s.SobrescreverConfiguracaoPostgres;
+        PostgresIpServidor = s.PostgresIpServidor;
+        PostgresPortaServidor = s.PostgresPortaServidor;
+        PostgresUsuarioServidor = s.PostgresUsuarioServidor;
+        PostgresSenhaServidor = s.PostgresSenhaServidor;
+        PostgresNomeBanco = s.PostgresNomeBanco;
+
+        if (SobrescreverConfiguracaoPostgres)
+            AplicarDefaultsPostgresSeVazio();
+
+        MensagemInlineGeral     = null;
+        MensagemInlineGeralErro = false;
         AbaAtiva = AbaConfiguracoes.Geral;
         _ = CarregarVersoesAsync();
     }
 
     private async Task SalvarAsync()
     {
-        var s = _userSettingsService.Settings;
-        var portaAntiga25 = s.PortaFirebird25;
-        var portaAntiga50 = s.PortaFirebird50;
+        MensagemInlineGeral = null;
+        MensagemInlineGeralErro = false;
 
-        s.PortaFirebird25   = PortaFirebird25.Trim();
-        s.PortaFirebird50   = PortaFirebird50.Trim();
-        s.DllFirebird25Path = DllFirebird25Path.Trim();
-        s.DllFirebird50Path = DllFirebird50Path.Trim();
-        await _userSettingsService.SalvarAsync();
+        var porta25 = PortaFirebird25.Trim();
+        var porta50 = PortaFirebird50.Trim();
+        if (!int.TryParse(porta25, out var p25) || p25 <= 0 || p25 > 65535
+            || !int.TryParse(porta50, out var p50) || p50 <= 0 || p50 > 65535)
+        {
+            MensagemInlineGeralErro = true;
+            MensagemInlineGeral = "Porta inválida. Use valores entre 1 e 65535 para Firebird 2.5 e 5.0.";
+            return;
+        }
 
-        // Propaga mudança de porta para todos os .ini existentes da versão afetada
-        bool portaMudou25 = !string.Equals(portaAntiga25, s.PortaFirebird25, StringComparison.Ordinal);
-        bool portaMudou50 = !string.Equals(portaAntiga50, s.PortaFirebird50, StringComparison.Ordinal);
+        var sobrescreverPostgres = SobrescreverConfiguracaoPostgres;
+        var postgresIp = PostgresIpServidor.Trim();
+        var postgresPorta = PostgresPortaServidor.Trim();
+        var postgresUsuario = PostgresUsuarioServidor.Trim();
+        var postgresSenha = PostgresSenhaServidor.Trim();
+        var postgresNomeBanco = PostgresNomeBanco.Trim();
 
-        if (portaMudou25 || portaMudou50)
-            await PropagarPortasAsync(portaMudou25, portaMudou50, s);
+        if (sobrescreverPostgres)
+        {
+            if (string.IsNullOrWhiteSpace(postgresIp)
+                || string.IsNullOrWhiteSpace(postgresUsuario)
+                || string.IsNullOrWhiteSpace(postgresSenha))
+            {
+                MensagemInlineGeralErro = true;
+                MensagemInlineGeral = "Preencha IP, usuário e senha do Postgres para sobrescrever a configuração.";
+                return;
+            }
 
-        _fechar();
+            if (!int.TryParse(postgresPorta, out var portaPg) || portaPg <= 0 || portaPg > 65535)
+            {
+                MensagemInlineGeralErro = true;
+                MensagemInlineGeral = "Porta do Postgres inválida. Use valores entre 1 e 65535.";
+                return;
+            }
+        }
+
+        try
+        {
+            var s = _userSettingsService.Settings;
+            var portaAntiga25 = s.PortaFirebird25;
+            var portaAntiga50 = s.PortaFirebird50;
+
+            s.PortaFirebird25   = porta25;
+            s.PortaFirebird50   = porta50;
+            s.DllFirebird25Path = DllFirebird25Path.Trim();
+            s.DllFirebird50Path = DllFirebird50Path.Trim();
+            s.SobrescreverConfiguracaoPostgres = sobrescreverPostgres;
+            s.PostgresIpServidor = postgresIp;
+            s.PostgresPortaServidor = postgresPorta;
+            s.PostgresUsuarioServidor = postgresUsuario;
+            s.PostgresSenhaServidor = postgresSenha;
+            s.PostgresNomeBanco = postgresNomeBanco;
+            await _userSettingsService.SalvarAsync();
+
+            // Propaga mudança de porta para todos os .ini existentes da versão afetada
+            bool portaMudou25 = !string.Equals(portaAntiga25, s.PortaFirebird25, StringComparison.Ordinal);
+            bool portaMudou50 = !string.Equals(portaAntiga50, s.PortaFirebird50, StringComparison.Ordinal);
+
+            if (portaMudou25 || portaMudou50)
+            {
+                var (_, falhas) = await PropagarPortasAsync(portaMudou25, portaMudou50, s);
+                if (falhas > 0)
+                {
+                    MensagemInlineGeralErro = false;
+                    MensagemInlineGeral = $"Configurações salvas, mas {falhas} instância(s) não tiveram o .ini atualizado automaticamente. Revise os logs e tente novamente.";
+                    return;
+                }
+            }
+
+            _fechar();
+        }
+        catch (Exception ex)
+        {
+            _log.Error(nameof(SalvarAsync), ex);
+            MensagemInlineGeralErro = true;
+            MensagemInlineGeral = MontarMensagemInline(
+                "Não foi possível salvar as configurações.",
+                "Revise os campos e tente novamente.",
+                ex.Message);
+        }
     }
 
-    private async Task PropagarPortasAsync(bool fb25, bool fb50, Models.UserSettings s)
+    private async Task<(int Atualizados, int Falhas)> PropagarPortasAsync(bool fb25, bool fb50, Models.UserSettings s)
     {
         IReadOnlyList<Models.EcoInstance> instancias;
         try
@@ -246,8 +413,11 @@ public class ConfiguracoesViewModel : ViewModelBase
         catch (Exception ex)
         {
             _log.Error(nameof(PropagarPortasAsync), ex);
-            return;
+            return (0, 1);
         }
+
+        var atualizados = 0;
+        var falhas = 0;
 
         foreach (var inst in instancias)
         {
@@ -265,14 +435,18 @@ public class ConfiguracoesViewModel : ViewModelBase
                 try
                 {
                     await _instanceSetupService.AtualizarSecoesFbAsync(inst.IniPath, opcoes);
+                    atualizados++;
                 }
                 catch (Exception ex)
                 {
+                    falhas++;
                     _log.Error(nameof(PropagarPortasAsync),
                         new Exception($"Falha ao atualizar .ini de '{inst.Apelido}': {ex.Message}", ex));
                 }
             }
         }
+
+        return (atualizados, falhas);
     }
 
     private static string? BrowseDll(string caminhoAtual)
@@ -291,6 +465,18 @@ public class ConfiguracoesViewModel : ViewModelBase
         return dlg.ShowDialog() == true ? dlg.FileName : null;
     }
 
+    private void AplicarDefaultsPostgresSeVazio()
+    {
+        if (string.IsNullOrWhiteSpace(PostgresIpServidor))
+            PostgresIpServidor = DefaultPostgresIp;
+        if (string.IsNullOrWhiteSpace(PostgresPortaServidor))
+            PostgresPortaServidor = DefaultPostgresPorta;
+        if (string.IsNullOrWhiteSpace(PostgresUsuarioServidor))
+            PostgresUsuarioServidor = DefaultPostgresUsuario;
+        if (string.IsNullOrWhiteSpace(PostgresSenhaServidor))
+            PostgresSenhaServidor = DefaultPostgresSenha;
+    }
+
     private async Task CarregarVersoesAsync()
     {
         IsCarregandoVersoes = true;
@@ -306,11 +492,14 @@ public class ConfiguracoesViewModel : ViewModelBase
                 .FirstOrDefault(v => string.Equals(v.Versao, VersaoAtual, StringComparison.OrdinalIgnoreCase));
 
             if (VersoesDisponiveis.Count == 0)
-                ErroVersoes = "Nenhuma versão encontrada. Verifique sua conexão com a internet.";
+                ErroVersoes = "Não encontramos versões disponíveis agora. Verifique sua conexão e tente novamente.";
         }
         catch (Exception ex)
         {
-            ErroVersoes = $"Não foi possível carregar as versões: {ex.Message}";
+            ErroVersoes = MontarMensagemInline(
+                "Não foi possível carregar as versões agora.",
+                "Verifique sua conexão e tente novamente.",
+                ex.Message);
         }
         finally
         {
@@ -322,6 +511,7 @@ public class ConfiguracoesViewModel : ViewModelBase
     {
         if (VersaoSelecionada is null) return;
 
+        // Regra UX: confirmação com reinício é obrigatória e permanece modal.
         bool confirmar = _dialogService.Confirmar(
             "Trocar versão",
             $"O EcoUtils será reiniciado para instalar a versão {VersaoSelecionada.Versao}.\n\nDeseja continuar?",
@@ -336,7 +526,10 @@ public class ConfiguracoesViewModel : ViewModelBase
         }
         catch (Exception ex)
         {
-            ErroVersoes      = $"Erro ao trocar versão: {ex.Message}";
+            ErroVersoes = MontarMensagemInline(
+                "Não foi possível trocar a versão agora.",
+                "Tente novamente em alguns instantes.",
+                ex.Message);
             IsTrocandoVersao = false;
         }
     }
